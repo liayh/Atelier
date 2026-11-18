@@ -64,6 +64,7 @@ aside{display:flex;flex-direction:column;gap:10px;min-height:0;overflow:auto;pad
 .kv span:first-child{color:var(--muted)} .kv span:last-child{font-family:var(--mono);font-size:12px}
 .field{display:grid;grid-template-columns:92px 1fr 52px;gap:8px;align-items:center;margin:6px 0;font-size:13px}
 .field input[type=range]{width:100%} .field output{font-family:var(--mono);font-size:12px;text-align:right}
+select{border:1px solid var(--line);border-radius:6px;padding:4px 7px;background:#fff;width:100%}
 input[type=text],input[type=number]{border:1px solid var(--line);border-radius:6px;padding:4px 7px;background:#fff;width:100%}
 .row{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
 .warn{font-size:12.5px;color:var(--warn);background:#fffbeb;border:1px solid #fde68a;border-radius:6px;padding:6px 8px;margin:4px 0}
@@ -220,11 +221,11 @@ const CAT = {
         svg:c => box(13, 19, c) + `<path d="M-3,-3a4,4 0 0 1 6,0M-1.6,0.2a2,2 0 0 1 3.2,0" stroke="#fff" stroke-width="1.3" fill="none"/><circle cy="4.5" r="1.4" fill="#fff"/>`},
 
   /* Vidéo (Securitas) */
-  cam: {g:"vid", label:"Caméra", c:"#c81e1e", link:"cat6", pre:"C", drop:1.5, poe:6.5, model:"Mini-dôme IP 4MP, 2,7-12 mm, IR 40 m",
+  cam: {g:"vid", label:"Caméra", c:"#c81e1e", link:"cat6", pre:"C", drop:1.5, poe:6.5, ch:1, model:"Mini-dôme IP 4MP, 2,7-12 mm, IR 40 m",
         svg:c => `<circle r="6.5" fill="${c}" stroke="#fff" stroke-width="1.6"/><circle r="2.4" fill="#fff"/>`},
-  cam4:{g:"vid", label:"Caméra 4 vues", c:"#c81e1e", link:"cat6", pre:"C4V", drop:1.5, poe:12, model:"Caméra 4 vues 4MP",
+  cam4:{g:"vid", label:"Caméra 4 vues", c:"#c81e1e", link:"cat6", pre:"C4V", drop:1.5, poe:12, ch:4, chRange:[1, 4], model:"Caméra 4 vues 4MP (4 capteurs : 4 voies NVR par défaut)",
         svg:c => `<circle r="9.5" fill="${c}" stroke="#fff" stroke-width="1.6"/><g fill="#fff"><circle cx="-3.6" cy="-3.6" r="1.9"/><circle cx="3.6" cy="-3.6" r="1.9"/><circle cx="-3.6" cy="3.6" r="1.9"/><circle cx="3.6" cy="3.6" r="1.9"/></g>`},
-  nvr: {g:"vid", label:"Enregistreur NVR", c:K, pre:"NVR", model:"NVR 32 voies + disque 12 To (dans la baie)",
+  nvr: {g:"vid", label:"Enregistreur NVR", c:K, pre:"NVR", ch:32, chOpts:[4, 8, 16, 32], model:"NVR 4 à 32 voies (dans la baie)",
         svg:c => box(24, 12, c, 1.5) + `<path d="M-8,-2h11M-8,2h11" stroke="#9ca3af" stroke-width="1.4"/><circle cx="8" r="1.6" fill="#22c55e"/>`},
   ecr: {g:"vid", label:"Écran de contrôle", c:K, pre:"ECR", model:"Écran LCD 24'' + support + cordon HDMI",
         svg:c => box(22, 14, c, 1.5) + `<path d="M-5,9h10M0,6v3" stroke="${c}" stroke-width="2"/>`},
@@ -239,18 +240,28 @@ const linkOf = i => CAT[i.type] && CAT[i.type].link;
 const qtyOf = i => CAT[i.type].qty ? (i.qty || 1) : 1;
 const isDev = i => !!linkOf(i);                              // relié par un câble tracé
 const isNum = i => !!CAT[i.type].pre;                        // élément numéroté (dupliquable, repère modifiable)
+/* voies NVR : un NVR offre `ch` voies (4, 8, 16, 32), chaque caméra en occupe `ch` (1 ; 4 pour la caméra 4 vues, réglable) */
+const NVR_SIZES = CAT.nvr.chOpts;
+const chOf = i => i.ch || CAT[i.type].ch || 0;
+const isNvr = i => !!CAT[i.type].chOpts;
+const camCh = () => P.items.filter(i => CAT[i.type].ch && !isNvr(i)).reduce((a, i) => a + chOf(i), 0);      // voies à connecter
+const nvrCap = () => P.items.filter(isNvr).reduce((a, i) => a + chOf(i), 0);                                 // voies disponibles
+const nvrFit = n => { const want = Math.max(0, camCh() - P.items.filter(i => isNvr(i) && i.id !== n.id).reduce((a, i) => a + chOf(i), 0)); return NVR_SIZES.find(v => v >= want) || NVR_SIZES[NVR_SIZES.length - 1]; };
+const variantOf = i => isNvr(i) ? chOf(i) + " voies" : "";
+const modelOf = i => isNvr(i) ? `NVR ${chOf(i)} voies, à placer dans la baie` : CAT[i.type].model;
 
 let planId = null, sel = null, multi = new Set(), tool = "select", grp = "net", view = null, drag = null, scalePts = [], moved = false;
 const poeOf = d => d.poe != null ? d.poe : (CAT[d.type].poe || 0);   // consommation PoE (W)
 const hasPoe = i => CAT[i.type].poe != null;
 const CORE_PRICES = [["ap", "Borne WiFi", "€ / u"], ["cam", "Caméra IP", "€ / u"], ["rj", "Prise RJ45", "€ / prise"], ["ba", "Baie de brassage", "€ / u"],
   ["sw", "Switch", "€ / u"], ["cable", "Câble Cat6", "€ / m"], ["fibre", "Fibre", "€ / m"], ["pose", "Pose et raccordement", "€ / point"]];
-const EXTRA = Object.keys(CAT).filter(k => !["ap", "cam", "rj", "ba", "fib", "gm"].includes(k));   // éléments chiffrés en plus, s'ils sont placés
-const PRICE_KEYS = [...CORE_PRICES, ["cablealarm", "Câble d'alarme", "€ / m"], ...EXTRA.map(k => [k, CAT[k].label, "€ / u"])];
+const EXTRA = Object.keys(CAT).filter(k => !["ap", "cam", "rj", "ba", "fib", "gm", "nvr"].includes(k));   // éléments chiffrés en plus, s'ils sont placés
+const PRICE_KEYS = [...CORE_PRICES, ["cablealarm", "Câble d'alarme", "€ / m"], ...EXTRA.map(k => [k, CAT[k].label, "€ / u"]), ...NVR_SIZES.map(n => ["nvr" + n, "Enregistreur NVR " + n + " voies", "€ / u"])];
 function defaultPrices(){ let d = {}; try { d = JSON.parse(localStorage.getItem("atelier-tarifs") || "{}"); } catch (e) {} return Object.fromEntries(PRICE_KEYS.map(([k]) => [k, +d[k] || 0])); }
 function fresh(){ return {name:"Mon projet", ports:48, poe:370, tva:20, prices:defaultPrices(), plans:[], items:[]}; }
 // Complète un projet ancien ou importé avec les champs ajoutés depuis.
-function norm(o){ return {name:o.name || "Projet", ports:o.ports || 48, poe:o.poe == null ? 370 : o.poe, tva:o.tva == null ? 20 : o.tva, prices:{...defaultPrices(), ...(o.prices || {})}, plans:o.plans || [], items:o.items || []}; }
+function normPrices(p){ const r = {...defaultPrices(), ...(p || {})}; if (r.nvr && !r.nvr32) r.nvr32 = r.nvr; delete r.nvr; return r; }   // 1.3.0 : un seul prix « NVR » (32 voies)
+function norm(o){ return {name:o.name || "Projet", ports:o.ports || 48, poe:o.poe == null ? 370 : o.poe, tva:o.tva == null ? 20 : o.tva, prices:normPrices(o.prices), plans:o.plans || [], items:o.items || []}; }
 let P = fresh();
 /* sélection : `sel` = élément principal, `multi` = sélection multiple (2 éléments ou plus) */
 const selIds = () => multi.size ? [...multi].filter(id => item(id)) : (item(sel) ? [sel] : []);
@@ -359,7 +370,7 @@ function symbol(i, on){
 }
 function label(i, pl){
   const c = CAT[i.type], q = c.qty && i.qty > 1 ? " ×" + i.qty : "";
-  return `<text class="t" x="12" y="-9" font-size="11" font-weight="700" fill="${c.c}">${esc(c.short || i.name + q)}</text>`;
+  return `<text class="t" x="12" y="-9" font-size="11" font-weight="700" fill="${c.c}">${esc(c.short || i.name + q + (isNvr(i) ? " · " + chOf(i) + " V" : ""))}</text>`;
 }
 function render(pl, s, interactive){
   const out = [`<image href="${pl.img}" x="0" y="0" width="${pl.w}" height="${pl.h}" opacity="${pl.op == null ? .6 : pl.op}"/>`];
@@ -444,6 +455,7 @@ function bilan(){
   const hasNet = ds.some(d => linkOf(d) === "cat6"), hasAlm = ds.some(d => linkOf(d) === "alarm");
   const poeUsed = ds.reduce((s, d) => s + poeOf(d), 0);
   const w = [];
+  if (P.items.some(isNvr) && camCh() > nvrCap()) w.push(`NVR : ${camCh()} voies nécessaires pour ${nvrCap()} disponibles. Choisis un NVR plus grand ou ajoute-en un.`);
   if (poeUsed > P.poe) w.push(`Budget PoE dépassé : ${f1(poeUsed)} W demandés pour ${P.poe} W disponibles sur le switch.`);
   if (!BA() && hasNet) w.push("Place la baie pour calculer les câbles.");
   if (!hubOf("alarm") && hasAlm) w.push("Place la centrale d'alarme pour calculer les câbles d'alarme.");
@@ -472,14 +484,19 @@ function stats(){
     fl == null ? "" : `Fibre : arrivée → baie ≈ ${Math.ceil(fl)} m (à prévoir ${Math.ceil(fl * 1.15 + 2)} m).`].filter(Boolean).join("<br>");
   bomPanel();
 }
-function bom(){        // nomenclature : une ligne par type d'élément, avec la répartition par plan
+function bom(){        // nomenclature : une ligne par type d'élément (et par taille de NVR), avec la répartition par plan
   const m = {};
-  P.items.forEach(i => { const p = planOf(i.plan); if (!CAT[i.type] || !p) return; const e = m[i.type] || (m[i.type] = {type:i.type, n:0, plans:{}}); e.n += qtyOf(i); e.plans[p.name] = (e.plans[p.name] || 0) + qtyOf(i); });
-  return Object.keys(CAT).filter(k => m[k]).map(k => m[k]);
+  P.items.forEach(i => {
+    const p = planOf(i.plan); if (!CAT[i.type] || !p) return; const v = variantOf(i), k = i.type + "|" + v;
+    const e = m[k] || (m[k] = {type:i.type, label:CAT[i.type].label + (v ? " " + v : ""), model:modelOf(i), n:0, plans:{}});
+    e.n += qtyOf(i); e.plans[p.name] = (e.plans[p.name] || 0) + qtyOf(i);
+  });
+  const order = Object.keys(CAT);
+  return Object.values(m).sort((a, b) => order.indexOf(a.type) - order.indexOf(b.type) || a.label.localeCompare(b.label, "fr", {numeric:true}));
 }
 function bomPanel(){
   const rows = bom();
-  $("bom").innerHTML = GROUPS.map(([g, l]) => { const r = rows.filter(e => CAT[e.type].g === g); return r.length ? `<tr class="gh"><td colspan="2">${l}</td></tr>` + r.map(e => { const c = CAT[e.type]; return `<tr><td><span class="dot" style="background:${c.c}"></span>${esc(c.label)}${c.model ? `<div class="mod">${esc(c.model)}</div>` : ""}</td><td style="text-align:right;vertical-align:top"><b>${e.n}</b></td></tr>`; }).join("") : ""; }).join("") || `<tr><td colspan="2" style="color:var(--muted)">Aucun élément placé.</td></tr>`;
+  $("bom").innerHTML = GROUPS.map(([g, l]) => { const r = rows.filter(e => CAT[e.type].g === g); return r.length ? `<tr class="gh"><td colspan="2">${l}</td></tr>` + r.map(e => { const c = CAT[e.type]; return `<tr><td><span class="dot" style="background:${c.c}"></span>${esc(e.label)}${e.model ? `<div class="mod">${esc(e.model)}</div>` : ""}</td><td style="text-align:right;vertical-align:top"><b>${e.n}</b></td></tr>`; }).join("") : ""; }).join("") || `<tr><td colspan="2" style="color:var(--muted)">Aucun élément placé.</td></tr>`;
 }
 function planPanel(){
   const pl = plan();
@@ -497,7 +514,7 @@ function selPanel(){
   const pl = planOf(s.plan);
   let h = `<div class="kv"><span>${NAMES[s.type]}</span><span>${esc(s.name || "")}</span></div><div class="kv"><span>Position</span><span>${f1((s.x) / ppm(pl))} m ; ${f1((s.y) / ppm(pl))} m</span></div>`;
   const c = CAT[s.type];
-  if (c.model) h += `<div class="kv"><span>Modèle</span><span style="font-family:var(--sans);text-align:right">${esc(c.model)}</span></div>`;
+  if (modelOf(s)) h += `<div class="kv"><span>Modèle</span><span style="font-family:var(--sans);text-align:right">${esc(modelOf(s))}</span></div>`;
   if (isNum(s)) h += `<div class="field" style="grid-template-columns:70px 1fr"><label for="s-name">Repère</label><input type="text" id="s-name" value="${esc(s.name)}"></div>`;
   if (isDev(s)){ const l = lens(s); if (l.raw != null) h += `<div class="kv"><span>Câble ${linkOf(s) === "alarm" ? "d'alarme " : ""}réel / à prévoir</span><span>${f1(l.raw)} m / ${l.order} m</span></div>`; }
   if (s.type === "cam"){
@@ -505,6 +522,14 @@ function selPanel(){
     h += fld("s-angle", "Direction", 0, 359, ((s.angle % 360) + 360) % 360, "°") + fld("s-fov", "Ouverture", 30, 120, s.fov, "°") + fld("s-r", "Portée", 2, 30, s.r, " m");
   }
   if (c.qty) h += `<div class="field" style="grid-template-columns:1fr 64px"><label for="s-qty">${s.type === "rj" ? "Nombre de prises" : "Nombre d'unités"}</label><input type="number" id="s-qty" min="1" max="${c.qty}" value="${s.qty || 1}"></div>`;
+  if (isNvr(s)){
+    const need = camCh(), fit = nvrFit(s), lack = need - nvrCap();
+    h += `<div class="field" style="grid-template-columns:1fr 100px"><label for="s-ch">Nombre de voies</label><select id="s-ch">${NVR_SIZES.map(n => `<option value="${n}"${n === chOf(s) ? " selected" : ""}>${n} voies</option>`).join("")}</select></div>`
+      + `<div class="kv"><span>Voies à connecter (caméras)</span><span>${need}</span></div>`;
+    if (lack > 0) h += `<div class="warn">${need} voies nécessaires pour ${nvrCap()} disponibles.</div>`;
+    if (fit !== chOf(s)) h += `<div class="row"><button class="b" id="s-fit">Adapter : ${fit} voies</button></div>`;
+  }
+  if (c.chRange) h += `<div class="field" style="grid-template-columns:1fr 64px"><label for="s-vch">Voies NVR occupées</label><input type="number" id="s-vch" min="${c.chRange[0]}" max="${c.chRange[1]}" value="${chOf(s)}"></div>`;
   if (hasPoe(s)) h += `<div class="field" style="grid-template-columns:1fr 64px"><label for="s-poe">Consommation PoE (W)</label><input type="number" id="s-poe" min="0" max="90" step="0.5" value="${poeOf(s)}"></div>`;
   if (isDev(s) && routeOn(s)) h += `<div class="kv"><span>Tracé du câble</span><span>${s.path && s.path.length ? s.path.length + " coude" + (s.path.length > 1 ? "s" : "") + " posé" + (s.path.length > 1 ? "s" : "") : "automatique"}</span></div>`;
   h += `<div class="row" style="margin-top:8px">${isNum(s) ? `<button class="b" id="s-dup" title="Ctrl+D">Dupliquer</button>` : ""}${s.path && s.path.length ? `<button class="b" id="s-auto">Tracé automatique</button>` : ""}<button class="b danger" id="s-del">Retirer</button></div>`;
@@ -536,12 +561,13 @@ function chiffrage(B){
   // éléments du catalogue (téléphonie, alarme, vidéo…) : une ligne seulement si un prix est saisi
   if (B.hasAlm && +pr.cablealarm) lines.push({lib:"Câble d'alarme", q:B.totalAlm, u:"m", p:+pr.cablealarm || 0, t:B.totalAlm * (+pr.cablealarm || 0), opt:true});
   EXTRA.forEach(k => { const q = B.cnt(k); if (q && +pr[k]) lines.push({lib:CAT[k].label, q, u:"u", p:+pr[k], t:q * +pr[k], opt:true}); });
+  NVR_SIZES.forEach(n => { const q = P.items.filter(i => isNvr(i) && chOf(i) === n).length, p = +pr["nvr" + n] || 0; if (q && p) lines.push({lib:"Enregistreur NVR " + n + " voies", q, u:"u", p, t:q * p, opt:true}); });
   const ht = lines.reduce((a, l) => a + l.t, 0), tva = ht * (+P.tva || 0) / 100;
   return {lines, ht, tva, ttc:ht + tva};
 }
 // Prix à saisir : les tarifs de base, plus ceux des éléments du catalogue qui sont placés dans le projet.
 function priceKeys(){
-  const used = new Set(P.items.map(i => i.type)), alm = devices().some(d => linkOf(d) === "alarm");
+  const used = new Set(P.items.map(i => isNvr(i) ? "nvr" + chOf(i) : i.type)), alm = devices().some(d => linkOf(d) === "alarm");
   return PRICE_KEYS.filter(([k]) => CORE_PRICES.some(c => c[0] === k) || (k === "cablealarm" ? alm : used.has(k))).map(([k]) => k);
 }
 // Champs des prix : rendus au chargement du projet ou quand un nouveau type d'élément est placé (pas pendant la saisie).
@@ -709,7 +735,7 @@ function scaleForm(){
 /* ---------- panneaux : événements délégués ---------- */
 $("tabs").addEventListener("click", e => { const b = e.target.closest("[data-plan]"); if (!b) return; planId = b.dataset.plan; sel = null; multi.clear(); sync(); fit(); save(); });
 $("rows").addEventListener("click", e => { const r = e.target.closest("[data-row]"); if (!r) return; const i = item(r.dataset.row); selectOnly(i.id); if (i.plan !== planId){ planId = i.plan; sync(); fit(); } else { draw(); panels(); } });
-const UNDOABLE = new Set(["pname", "ports", "poe", "tva", "pl-name", "pl-z", "pl-op", "pl-cab", "s-name", "s-angle", "s-fov", "s-r", "s-qty", "s-poe"]);
+const UNDOABLE = new Set(["pname", "ports", "poe", "tva", "pl-name", "pl-z", "pl-op", "pl-cab", "s-name", "s-angle", "s-fov", "s-r", "s-qty", "s-poe", "s-ch", "s-vch"]);
 document.addEventListener("input", e => {
   const id = e.target.id, pl = plan(), s = item(sel);
   if (UNDOABLE.has(id) || id.startsWith("pr-")) mark(id + ":" + (id.startsWith("s-") && s ? s.id : id.startsWith("pl-") && pl ? pl.id : ""));
@@ -727,10 +753,13 @@ document.addEventListener("input", e => {
   if (id === "tva"){ P.tva = Math.max(0, Math.min(100, parseFloat(e.target.value) || 0)); panelsNoSel(); save(); }
   if (id.startsWith("pr-")){ P.prices[id.slice(3)] = Math.max(0, parseFloat(e.target.value) || 0); panelsNoSel(); save(); }
   if (id === "s-poe" && s){ s.poe = Math.max(0, Math.min(90, parseFloat(e.target.value) || 0)); panelsNoSel(); save(); }
+  if (id === "s-ch" && s){ s.ch = +e.target.value; refresh(); }
+  if (id === "s-vch" && s && CAT[s.type].chRange){ s.ch = Math.max(CAT[s.type].chRange[0], Math.min(CAT[s.type].chRange[1], parseInt(e.target.value) || 1)); panelsNoSel(); save(); }
   if (id === "s-qty" && s){ s.qty = Math.max(1, Math.min(CAT[s.type].qty || 1, +e.target.value || 1)); panelsNoSel(); save(); }
 });
 document.addEventListener("click", e => {
   if (e.target.id === "s-del") removeSel();
+  if (e.target.id === "s-fit"){ const n = item(sel); if (n && isNvr(n)){ mark(); n.ch = nvrFit(n); refresh(); } }
   if (e.target.id === "s-dup") duplicate();
   if (e.target.id === "s-auto"){ mark(); selIds().forEach(id => delete item(id).path); refresh(); }
   if (e.target.id === "m-qty-ok"){ const v = Math.max(1, Math.min(6, parseInt($("m-qty").value) || 1)); mark(); selIds().map(item).filter(i => i.type === "rj").forEach(i => i.qty = v); refresh(); msg(`${v} prise${v > 1 ? "s" : ""} par point appliqué.`); }
@@ -844,7 +873,7 @@ $("x-csv").onclick = () => {
 };
 $("x-bom").onclick = () => {
   const cat = Object.fromEntries(GROUPS), rows = [["Categorie", "Designation", "Modele", "Quantite", "Repartition par plan"]];
-  bom().forEach(e => { const c = CAT[e.type]; rows.push([cat[c.g], c.label, c.model || "", e.n, Object.entries(e.plans).map(([p, n]) => `${p} : ${n}`).join(" | ")]); });
+  bom().forEach(e => { const c = CAT[e.type]; rows.push([cat[c.g], e.label, e.model || "", e.n, Object.entries(e.plans).map(([p, n]) => `${p} : ${n}`).join(" | ")]); });
   saveFile(slug(P.name) + "-materiel.csv", "﻿" + rows.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(";")).join("\n"));
 };
 // Plan annoté rendu dans un canvas (taille max. `maxDim` px sur le grand côté).
@@ -877,7 +906,7 @@ async function reportHtml(){
   if (B.fl != null) mat.push(["Fibre opérateur (arrivée → baie)", Math.ceil(B.fl * 1.15 + 2) + " m", `tracé ≈ ${Math.ceil(B.fl)} m`]);
   if (B.hasAlm) mat.push(["Câble d'alarme", B.totalAlm + " m", "de la centrale vers les éléments d'alarme"]);
   // éléments du catalogue placés (téléphonie, alarme, vidéo, internet) hors lignes déjà présentes ci-dessus
-  bom().filter(e => !["ap", "cam", "rj", "ba", "fib", "gm"].includes(e.type)).forEach(e => mat.push([esc(CAT[e.type].label), e.n, esc(CAT[e.type].model || "")]));
+  bom().filter(e => !["ap", "cam", "rj", "ba", "fib", "gm"].includes(e.type)).forEach(e => mat.push([esc(e.label), e.n, esc(e.model || "")]));
   const Q = chiffrage(B);
   const quoteSection = !Q.ht ? "" : `<section class="page"><h2>Estimation</h2><p class="sub">Prix unitaires hors taxes. Estimation indicative, à confirmer par un devis.</p>
 <table style="max-width:200mm"><thead><tr><th>Désignation</th><th class="n">Quantité</th><th>Unité</th><th class="n">Prix unitaire HT</th><th class="n">Total HT</th></tr></thead><tbody>
