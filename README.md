@@ -34,11 +34,18 @@ La longueur suit le tracé dessiné.
 **Chiffrage** : prix unitaires HT + TVA, page « Estimation » dans le rapport ; « Retenir comme tarifs par défaut »
 les réutilise pour les nouveaux projets.
 
+## Installer sous Linux (64 bits)
+- **AppImage** (toutes distributions) : `chmod +x Atelier-implantation-1.2.0-x86_64.AppImage` puis double-clic.
+  Si l'AppImage ne démarre pas (FUSE absent) : `./Atelier-implantation-1.2.0-x86_64.AppImage --appimage-extract-and-run`.
+- **Ubuntu / Debian** : `sudo apt install ./Atelier-implantation-1.2.0-amd64.deb` — ajoute l'app au menu et
+  l'ouverture des fichiers `.atelier` par double-clic.
+
 ## Développement (Linux)
 ```bash
 npm install
 npm start          # lance l'app (depuis le terminal de Claude Code : env -u ELECTRON_RUN_AS_NODE npm start)
 npm run dist:win   # construit l'installateur Windows (via Docker electronuserland/builder:wine)
+npm run dist:linux # construit l'AppImage et le .deb
 npm run icon       # régénère build/icon.png depuis build/icon.svg
 ```
 Pour une nouvelle version : changer `version` dans `package.json`, puis `npm run dist:win`.

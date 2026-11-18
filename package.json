@@ -11,7 +11,8 @@
     "sync": "node scripts/sync-web.js",
     "icon": "electron scripts/make-icon.js",
     "start": "npm run sync && electron .",
-    "dist:win": "npm run sync && bash scripts/build-win.sh"
+    "dist:win": "npm run sync && bash scripts/build-win.sh",
+    "dist:linux": "npm run sync && electron-builder --linux AppImage deb --x64"
   },
   "build": {
     "appId": "fr.devben.atelierimplantation",
@@ -53,9 +54,29 @@
         "name": "AtelierImplantation.Projet",
         "description": "Projet Atelier d'implantation",
         "icon": "icon.ico",
-        "role": "Editor"
+        "role": "Editor",
+        "mimeType": "application/x-atelier-implantation"
       }
-    ]
+    ],
+    "linux": {
+      "target": [
+        "AppImage",
+        "deb"
+      ],
+      "executableName": "atelier-implantation",
+      "icon": "build/icon.png",
+      "category": "Office;Engineering",
+      "synopsis": "Implantation réseau sur plans : WiFi, caméras, RJ45, câblage, chiffrage",
+      "maintainer": "liayh <liayh@users.noreply.github.com>",
+      "artifactName": "Atelier-implantation-${version}-${arch}.${ext}",
+      "desktop": {
+        "entry": {
+          "Name": "Atelier d'implantation",
+          "Comment": "Implantation réseau sur plans",
+          "StartupWMClass": "atelier-implantation"
+        }
+      }
+    }
   },
   "devDependencies": {
     "electron": "^45.3.4",
@@ -63,5 +84,6 @@
     "@fontsource/ibm-plex-mono": "^5.3.0",
     "@fontsource/ibm-plex-sans": "^5.3.0",
     "pdfjs-dist": "^3.11.174"
-  }
+  },
+  "homepage": "https://github.com/liayh/Atelier"
 }
