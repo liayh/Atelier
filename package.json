@@ -1,0 +1,58 @@
+{
+  "name": "atelier-implantation",
+  "productName": "Atelier d'implantation",
+  "version": "1.0.0",
+  "description": "Implantation réseau sur plans : bornes WiFi, caméras, prises RJ45, baie, fibre et longueurs de câble.",
+  "author": "devben",
+  "license": "UNLICENSED",
+  "private": true,
+  "main": "src/main.js",
+  "scripts": {
+    "sync": "node scripts/sync-web.js",
+    "icon": "electron scripts/make-icon.js",
+    "start": "npm run sync && electron .",
+    "dist:win": "npm run sync && bash scripts/build-win.sh"
+  },
+  "build": {
+    "appId": "fr.devben.atelierimplantation",
+    "productName": "Atelier d'implantation",
+    "executableName": "AtelierImplantation",
+    "artifactName": "Atelier-implantation-Setup-${version}.${ext}",
+    "files": [
+      "src/**/*",
+      "web/**/*",
+      "package.json"
+    ],
+    "directories": {
+      "output": "dist",
+      "buildResources": "build"
+    },
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "build/icon.png"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Atelier d'implantation",
+      "language": "1036"
+    }
+  },
+  "devDependencies": {
+    "electron": "^45.3.4",
+    "electron-builder": "^26.18.0",
+    "@fontsource/ibm-plex-mono": "^5.3.0",
+    "@fontsource/ibm-plex-sans": "^5.3.0",
+    "pdfjs-dist": "^3.11.174"
+  }
+}

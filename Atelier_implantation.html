@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Atelier d'implantation</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+/* Atelier d'implantation : barre d'outils au-dessus, grand plan à gauche, mesures à droite */
+:root{
+  --ink:#0f172a; --muted:#5b6678; --paper:#f3f4f6; --panel:#ffffff; --line:#dde1e8; --accent:#1d4ed8;
+  --fibre:#ea580c; --wifi:#15803d; --cam:#c81e1e; --rj:#1d4ed8; --power:#6d28d9; --bad:#b91c1c; --ok:#15803d; --warn:#b45309;
+  --sans:'IBM Plex Sans',system-ui,-apple-system,'Segoe UI',sans-serif; --mono:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+  color-scheme:light;
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{background:var(--paper);color:var(--ink);font:14px/1.45 var(--sans);display:flex;flex-direction:column}
+button,input,select{font:inherit;color:inherit}
+button:focus-visible,input:focus-visible,select:focus-visible,.tab:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+header{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;padding:10px 16px;background:var(--panel);border-bottom:1px solid var(--line)}
+h1{font-size:16px;margin:0;font-weight:700}
+#pname{font-weight:600;border:1px solid transparent;border-radius:6px;padding:4px 8px;background:transparent;min-width:180px;width:auto}
+#pname:hover,#pname:focus{border-color:var(--line);background:#fff}
+.sp{flex:1}
+.b{font-weight:600;font-size:13px;padding:6px 11px;border-radius:6px;border:1px solid var(--line);background:var(--paper);cursor:pointer;white-space:nowrap}
+.b:hover{border-color:var(--ink)} .b.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.b.danger{color:var(--bad)} .b:disabled{opacity:.45;cursor:default}
+.plans{display:flex;gap:4px;align-items:center;padding:8px 16px 0;flex-wrap:wrap}
+.tab{border:1px solid var(--line);border-bottom:0;background:#e8eaee;padding:6px 12px;border-radius:6px 6px 0 0;cursor:pointer;font-weight:600;font-size:13px}
+.tab[aria-selected="true"]{background:var(--panel)}
+.layout{flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:12px;padding:0 16px 12px}
+.main{display:flex;flex-direction:column;min-height:0;background:var(--panel);border:1px solid var(--line);border-radius:0 8px 8px 8px}
+.bar{display:flex;gap:4px;flex-wrap:wrap;padding:8px;border-bottom:1px solid var(--line);align-items:center}
+.tool{display:flex;align-items:center;gap:5px;padding:5px 7px;border:1px solid var(--line);border-radius:6px;background:var(--paper);cursor:pointer;font-size:13px;font-weight:500}
+.tool:hover{border-color:var(--ink)} .tool[aria-pressed="true"]{background:var(--ink);color:#fff;border-color:var(--ink)}
+.tool i{width:12px;height:12px;display:inline-block;border-radius:50%}
+.sep{width:1px;height:22px;background:var(--line);margin:0 4px}
+.stage{position:relative;flex:1;min-height:420px;background:#e9ebef;border-radius:0 0 8px 8px;overflow:hidden}
+svg#plan{position:absolute;inset:0;width:100%;height:100%;touch-action:none;user-select:none;display:block}
+.drop{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:24px}
+.dz{max-width:520px;text-align:center;border:2px dashed #b6bdc9;border-radius:12px;padding:34px 28px;background:#fff}
+.dz.over{border-color:var(--accent);background:#eff6ff}
+.dz h2{margin:0 0 6px;font-size:19px} .dz p{margin:0 0 16px;color:var(--muted)}
+.hint{font-size:12px;color:var(--muted);padding:6px 10px;border-top:1px solid var(--line)}
+aside{display:flex;flex-direction:column;gap:10px;min-height:0;overflow:auto;padding-bottom:4px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:11px}
+.card h3{font-size:11.5px;letter-spacing:.6px;text-transform:uppercase;color:var(--muted);margin:0 0 8px;font-weight:600}
+.tiles{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.tile{border:1px solid var(--line);border-radius:6px;padding:6px 8px}
+.tile b{display:block;font-size:18px;font-variant-numeric:tabular-nums;line-height:1.15}
+.tile span{font-size:11px;color:var(--muted)} .tile.bad{border-color:var(--bad)} .tile.bad b{color:var(--bad)}
+.kv{display:flex;justify-content:space-between;gap:8px;font-size:13px;margin:3px 0}
+.kv span:first-child{color:var(--muted)} .kv span:last-child{font-family:var(--mono);font-size:12px}
+.field{display:grid;grid-template-columns:92px 1fr 52px;gap:8px;align-items:center;margin:6px 0;font-size:13px}
+.field input[type=range]{width:100%} .field output{font-family:var(--mono);font-size:12px;text-align:right}
+input[type=text],input[type=number]{border:1px solid var(--line);border-radius:6px;padding:4px 7px;background:#fff;width:100%}
+.row{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.warn{font-size:12.5px;color:var(--warn);background:#fffbeb;border:1px solid #fde68a;border-radius:6px;padding:6px 8px;margin:4px 0}
+.list{max-height:230px;overflow:auto;border:1px solid var(--line);border-radius:6px}
+table{border-collapse:collapse;width:100%;font-size:12.5px;font-variant-numeric:tabular-nums}
+th{position:sticky;top:0;background:var(--paper);text-align:left;font-weight:600;padding:4px 7px;border-bottom:1px solid var(--line);color:var(--muted);font-size:11.5px}
+td{padding:3px 7px;border-bottom:1px solid var(--line)} tr.item{cursor:pointer} tr.item:hover td{background:#f1f5f9} tr.item.sel td{background:#dbeafe}
+.dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px}
+.pill{font-size:11px;font-weight:600;padding:1px 6px;border-radius:10px;background:#fee2e2;color:var(--bad)}
+.msg{font-size:12.5px;color:var(--muted);min-height:18px;margin-top:6px}
+text.t{paint-order:stroke;stroke:#fff;stroke-width:3px;stroke-linejoin:round;font-family:var(--sans)}
+@media (max-width:980px){body{display:block;height:auto}.layout{grid-template-columns:1fr}.stage{min-height:62vh}}
+</style>
+</head>
+<body>
+<header>
+  <h1>Atelier d'implantation</h1>
+  <input id="pname" type="text" aria-label="Nom du projet" value="Mon projet">
+  <span class="sp"></span>
+  <label class="b" for="addplan">+ Ajouter un plan</label>
+  <input id="addplan" type="file" accept="application/pdf,image/png,image/jpeg,image/webp" multiple hidden>
+  <label class="b" for="openproj">Ouvrir un projet</label>
+  <input id="openproj" type="file" accept=".json,application/json" hidden>
+  <button class="b" id="newproj">Nouveau</button>
+</header>
+<div class="plans" id="tabs" role="tablist" aria-label="Plans"></div>
+<div class="layout">
+  <section class="main">
+    <div class="bar" id="bar">
+      <button class="tool" data-tool="select" aria-pressed="true" title="Déplacer / sélectionner (Échap)">Sélection</button>
+      <span class="sep"></span>
+      <button class="tool" data-tool="ap"><i style="background:var(--wifi)"></i>Borne WiFi</button>
+      <button class="tool" data-tool="cam"><i style="background:var(--cam)"></i>Caméra</button>
+      <button class="tool" data-tool="rj"><i style="background:var(--rj);border-radius:2px"></i>Prise RJ45</button>
+      <span class="sep"></span>
+      <button class="tool" data-tool="ba"><i style="background:#111;border-radius:2px"></i>Baie</button>
+      <button class="tool" data-tool="fib"><i style="background:var(--fibre);border-radius:2px;transform:rotate(45deg)"></i>Arrivée fibre</button>
+      <button class="tool" data-tool="gm"><i style="background:#fff;border:2px solid var(--fibre);border-radius:2px"></i>Gaine montante</button>
+      <span class="sep"></span>
+      <button class="tool" data-tool="scale">Échelle</button>
+      <label class="tool" style="cursor:pointer"><input type="checkbox" id="snap"> Grille 25 cm</label>
+      <span class="sp"></span>
+      <button class="b" id="zin" aria-label="Zoom avant">+</button>
+      <button class="b" id="zout" aria-label="Zoom arrière">−</button>
+      <button class="b" id="zfit">Ajuster</button>
+    </div>
+    <div class="stage" id="stage">
+      <svg id="plan" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Plan"></svg>
+      <div class="drop" id="drop">
+        <div class="dz" id="dz">
+          <h2>Dépose ton plan ici</h2>
+          <p>PDF, PNG ou JPG. Chaque page d'un PDF devient un plan : rez-de-chaussée, mezzanine, étage…</p>
+          <label class="b primary" for="addplan2">Choisir un fichier</label>
+          <input id="addplan2" type="file" accept="application/pdf,image/png,image/jpeg,image/webp" multiple hidden>
+          <div class="msg" id="dropmsg"></div>
+        </div>
+      </div>
+    </div>
+    <div class="hint" id="legend" style="display:flex;gap:14px;flex-wrap:wrap"><span><b style="color:#ea580c">━</b> fibre opérateur</span><span><b style="color:#1d4ed8">━</b> câble Cat6</span><span><b style="color:#9ca3af">━</b> chemin de câbles</span><span><b style="color:#6d28d9">╌</b> 230 V dédié baie</span></div>
+    <div class="hint" id="hint">Molette : zoom. Glisser le fond : déplacer le plan. Flèches : déplacer l'élément choisi. Suppr : retirer.</div>
+  </section>
+  <aside>
+    <div class="card"><h3>Bilan du projet</h3><div class="tiles" id="tiles"></div><div id="warns"></div>
+      <div class="field" style="grid-template-columns:1fr 70px;margin-top:8px"><label for="ports">Ports du switch</label><input id="ports" type="number" min="8" max="96" value="48"></div></div>
+    <div class="card"><h3>Ce plan</h3><div id="planbox"></div></div>
+    <div class="card"><h3>Élément choisi</h3><div id="sel"><span style="color:var(--muted)">Clique un élément sur le plan.</span></div></div>
+    <div class="card"><h3>Liaisons depuis la baie</h3>
+      <div class="list"><table><thead><tr><th>Repère</th><th>Plan</th><th>Réel</th><th>À prévoir</th></tr></thead><tbody id="rows"></tbody></table></div>
+      <div class="msg" id="fibre"></div></div>
+    <div class="card"><h3>Enregistrer et exporter</h3>
+      <div class="row">
+        <button class="b primary" id="x-json">Projet (.json)</button>
+        <button class="b" id="x-csv">Liaisons (.csv)</button>
+        <button class="b" id="x-png">Ce plan (.png)</button>
+      </div>
+      <div class="row" style="margin-top:6px"><button class="b" id="x-copy">Copier la configuration</button><button class="b danger" id="x-clear">Retirer tous les éléments</button></div>
+      <textarea id="json" readonly hidden aria-label="Configuration JSON" style="width:100%;height:90px;margin-top:8px;font:12px/1.4 var(--mono);border:1px solid var(--line);border-radius:6px;padding:6px"></textarea>
+      <div class="msg" id="msg">Le projet se garde seul dans ce navigateur. Le fichier .json le rend portable (plans compris).</div></div>
+  </aside>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const f1 = n => Math.round(n * 10) / 10;
+const COL = {ap:"#15803d", cam:"#c81e1e", rj:"#1d4ed8", ba:"#111", fib:"#ea580c", gm:"#ea580c"};
+const NAMES = {ap:"Borne WiFi", cam:"Caméra", rj:"Prise RJ45", ba:"Baie", fib:"Arrivée fibre", gm:"Gaine montante"};
+const uid = () => Math.random().toString(36).slice(2, 9);
+
+let P = fresh();
+let planId = null, sel = null, tool = "select", view = null, drag = null, scalePts = [], moved = false;
+function fresh(){ return {name:"Mon projet", ports:48, plans:[], items:[]}; }
+const plan = () => P.plans.find(p => p.id === planId);
+const item = id => P.items.find(i => i.id === id);
+const ppm = p => p.ppm || p.w / 30;
+const devices = () => P.items.filter(i => ["ap","cam","rj"].includes(i.type));
+const BA = () => P.items.find(i => i.type === "ba");
+const FIB = () => P.items.find(i => i.type === "fib");
+const GM = pid => P.items.find(i => i.type === "gm" && i.plan === pid);
+const planOf = id => P.plans.find(p => p.id === id);
+
+/* ---------- sauvegarde locale (IndexedDB, au mieux) ---------- */
+let saveT = null, dbp = null;
+function idb(){ if (dbp) return dbp; dbp = new Promise((res, rej) => { try { const r = indexedDB.open("atelier-implantation", 1); r.onupgradeneeded = () => r.result.createObjectStore("p"); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); } catch (e) { rej(e); } }); return dbp; }
+function save(){ clearTimeout(saveT); saveT = setTimeout(async () => { try { const d = await idb(); d.transaction("p", "readwrite").objectStore("p").put({P, planId}, "cur"); } catch (e) {} }, 500); }
+async function restore(){ try { const d = await idb(); const r = d.transaction("p").objectStore("p").get("cur"); r.onsuccess = () => { const v = r.result; if (v && v.P && v.P.plans && v.P.plans.length){ P = v.P; planId = v.planId && planOf(v.planId) ? v.planId : P.plans[0].id; sync(); fit(); } }; } catch (e) {} }
+
+/* ---------- câblage ---------- */
+const man = pts => pts.slice(1).reduce((s, p, i) => s + Math.abs(p[0] - pts[i][0]) + Math.abs(p[1] - pts[i][1]), 0);
+function routeOn(d){           // tracé sur le plan de l'appareil
+  const b = BA(), pl = planOf(d.plan); if (!pl) return null;
+  if (b && b.plan === d.plan) return [[b.x, b.y], [d.x, b.y], [d.x, d.y]];
+  const g = GM(d.plan); if (g) return [[g.x, g.y], [d.x, g.y], [d.x, d.y]];
+  return null;
+}
+function lens(d){
+  const b = BA(), pl = planOf(d.plan), pts = routeOn(d), a = d.type === "rj" ? 2.5 : 1.5;
+  if (!b || !pts) return {raw:null, order:null, why: !b ? "baie manquante" : "gaine manquante"};
+  let m = man(pts) / ppm(pl) + a;
+  if (b.plan !== d.plan){
+    const pb = planOf(b.plan), gb = GM(b.plan);
+    if (!gb) return {raw:null, order:null, why:"gaine manquante (plan de la baie)"};
+    m += man([[b.x, b.y], [gb.x, b.y], [gb.x, gb.y]]) / ppm(pb) + Math.abs((pl.z || 0) - (pb.z || 0)) + 2;
+  }
+  return {raw:m, order:Math.ceil(m * 1.1 + 3)};
+}
+function fibreLen(){
+  const f = FIB(), b = BA(); if (!f || !b) return null;
+  const pf = planOf(f.plan), pb = planOf(b.plan);
+  if (f.plan === b.plan) return man([[f.x, f.y], [b.x, f.y], [b.x, b.y]]) / ppm(pf) + 3;
+  const gf = GM(f.plan), gb = GM(b.plan); if (!gf || !gb) return null;
+  return man([[f.x, f.y], [gf.x, f.y], [gf.x, gf.y]]) / ppm(pf) + Math.abs((pf.z || 0) - (pb.z || 0)) + man([[gb.x, gb.y], [gb.x, b.y], [b.x, b.y]]) / ppm(pb) + 5;
+}
+
+/* ---------- dessin ---------- */
+const svg = $("plan");
+function sFactor(){ const r = svg.getBoundingClientRect(); return 1 / Math.min(r.width / view.w, r.height / view.h); }
+function symbol(i, on){
+  const h = on ? `<circle r="17" fill="none" stroke="#0f172a" stroke-width="1.5" stroke-dasharray="4 3"/>` : "";
+  const hit = `<circle r="15" fill="transparent"/>`;
+  if (i.type === "ap") return h + hit + `<circle r="10" fill="${COL.ap}" stroke="#fff" stroke-width="1.6"/><path d="M-6,.5 a8,8 0 0 1 12,0 M-3.6,3 a4.6,4.6 0 0 1 7.2,0" stroke="#fff" stroke-width="1.4" fill="none"/><circle cy="5.6" r="1.3" fill="#fff"/>`;
+  if (i.type === "cam") return h + hit + `<circle r="6.5" fill="${COL.cam}" stroke="#fff" stroke-width="1.6"/><circle r="2.4" fill="#fff"/>`;
+  if (i.type === "rj") return h + hit + `<rect x="-5.5" y="-5.5" width="11" height="11" fill="${COL.rj}" stroke="#fff" stroke-width="1.4"/>`;
+  if (i.type === "ba") return h + hit + `<rect x="-11" y="-16" width="22" height="32" fill="#111" stroke="#fff" stroke-width="1.4"/><path d="M-7,-10h14M-7,-5h14M-7,0h14M-7,5h14" stroke="#94a3b8" stroke-width="2"/>`;
+  if (i.type === "fib") return h + hit + `<polygon points="0,-10 10,0 0,10 -10,0" fill="${COL.fib}" stroke="#fff" stroke-width="1.6"/>`;
+  return h + hit + `<rect x="-9" y="-9" width="18" height="18" fill="#fff" stroke="${COL.gm}" stroke-width="2"/><path d="M-9,-9L9,9M9,-9L-9,9" stroke="${COL.gm}"/>`;
+}
+function label(i, pl){
+  const q = i.type === "rj" && i.qty > 1 ? " ×" + i.qty : "";
+  const t = {ap:i.name, cam:i.name, rj:i.name + q, ba:"Baie", fib:"Fibre", gm:"Gaine"}[i.type];
+  return `<text class="t" x="12" y="-9" font-size="11" font-weight="700" fill="${COL[i.type]}">${esc(t)}</text>`;
+}
+function render(pl, s, interactive){
+  const out = [`<image href="${pl.img}" x="0" y="0" width="${pl.w}" height="${pl.h}" opacity="${pl.op == null ? .6 : pl.op}"/>`];
+  const devs = devices().filter(d => d.plan === pl.id), b = BA(), f = FIB(), g = GM(pl.id);
+  const poly = (pts, st) => `<polyline points="${pts.map(p => p.join(",")).join(" ")}" fill="none" ${st} stroke-linejoin="round" pointer-events="none" vector-effect="non-scaling-stroke"/>`;
+  if (pl.cables !== false){
+    devs.forEach(d => { const r = routeOn(d); if (r) out.push(poly(r, `stroke="#9ca3af" stroke-width="${6}" opacity=".35"`)); });
+    devs.forEach(d => { const r = routeOn(d); if (r) out.push(poly(r, `stroke="#1d4ed8" stroke-width="1.2" opacity=".8"`)); });
+    if (b && b.plan === pl.id && f && f.plan === pl.id) out.push(poly([[f.x, f.y], [b.x, f.y], [b.x, b.y]], `stroke="#ea580c" stroke-width="3.2"`));
+    if (f && f.plan === pl.id && b && b.plan !== pl.id && g) out.push(poly([[f.x, f.y], [g.x, f.y], [g.x, g.y]], `stroke="#ea580c" stroke-width="3.2"`));
+    if (b && b.plan === pl.id && g && P.plans.length > 1){
+      out.push(poly([[b.x, b.y], [g.x, b.y], [g.x, g.y]], `stroke="#ea580c" stroke-width="2" stroke-dasharray="6 3"`));
+      out.push(poly([[b.x, b.y + 9 * s], [g.x + 9 * s, b.y + 9 * s], [g.x + 9 * s, g.y]], `stroke="#6d28d9" stroke-width="1.8" stroke-dasharray="5 3"`));
+    }
+  }
+  devs.filter(d => d.type === "cam").forEach(d => {
+    const r = d.r * ppm(pl), a1 = (d.angle - d.fov / 2) * Math.PI / 180, a2 = (d.angle + d.fov / 2) * Math.PI / 180;
+    out.push(`<path d="M${d.x},${d.y} L${(d.x + r * Math.cos(a1)).toFixed(1)},${(d.y + r * Math.sin(a1)).toFixed(1)} A${r.toFixed(1)},${r.toFixed(1)} 0 0 1 ${(d.x + r * Math.cos(a2)).toFixed(1)},${(d.y + r * Math.sin(a2)).toFixed(1)} Z" fill="rgba(200,30,30,.16)" stroke="#c81e1e" stroke-width="1" stroke-dasharray="4 3" pointer-events="none" vector-effect="non-scaling-stroke"/>`);
+  });
+  if (b && b.plan !== pl.id) {} // la baie n'apparaît que sur son plan
+  P.items.filter(i => i.plan === pl.id).forEach(i => {
+    out.push(`<g ${interactive ? `data-id="${i.id}" style="cursor:grab"` : ""} transform="translate(${i.x},${i.y}) scale(${s})">${symbol(i, interactive && sel === i.id)}${label(i, pl)}</g>`);
+  });
+  const c = item(sel);
+  if (interactive && c && c.type === "cam" && c.plan === pl.id){
+    const r = c.r * ppm(pl) + 14 * s, a = c.angle * Math.PI / 180, hx = c.x + r * Math.cos(a), hy = c.y + r * Math.sin(a);
+    out.push(`<line x1="${c.x}" y1="${c.y}" x2="${hx}" y2="${hy}" stroke="#0f172a" stroke-width="1" stroke-dasharray="2 3" pointer-events="none" vector-effect="non-scaling-stroke"/>`);
+    out.push(`<circle data-handle="${c.id}" cx="${hx}" cy="${hy}" r="${7 * s}" fill="#fff" stroke="#0f172a" stroke-width="${1.8 * s}" style="cursor:crosshair"/>`);
+  }
+  if (interactive && tool === "scale" && scalePts.length){
+    const q = scalePts;
+    out.push(`<g stroke="#7c3aed" stroke-width="${2 * s}" fill="#7c3aed">${q.length === 2 ? `<line x1="${q[0][0]}" y1="${q[0][1]}" x2="${q[1][0]}" y2="${q[1][1]}"/>` : ""}${q.map(p => `<circle cx="${p[0]}" cy="${p[1]}" r="${5 * s}"/>`).join("")}</g>`);
+  }
+  return out.join("");
+}
+function draw(){
+  const pl = plan(); if (!pl){ svg.innerHTML = ""; return; }
+  svg.setAttribute("viewBox", `${view.x} ${view.y} ${view.w} ${view.h}`);
+  svg.innerHTML = render(pl, sFactor(), true);
+}
+function fit(){ const pl = plan(); if (!pl) return; view = {x:0, y:0, w:pl.w, h:pl.h}; const r = svg.getBoundingClientRect(); if (r.width && r.height){ const k = Math.max(pl.w / r.width, pl.h / r.height); view = {x:(pl.w - r.width * k) / 2, y:(pl.h - r.height * k) / 2, w:r.width * k, h:r.height * k}; } draw(); }
+
+/* ---------- panneaux ---------- */
+function sync(){
+  $("pname").value = P.name; $("ports").value = P.ports;
+  $("drop").style.display = P.plans.length ? "none" : "flex";
+  $("tabs").innerHTML = P.plans.map(p => `<button class="tab" role="tab" data-plan="${p.id}" aria-selected="${p.id === planId}">${esc(p.name)}</button>`).join("");
+  panels();
+}
+function panels(){ stats(); planPanel(); selPanel(); }
+function stats(){
+  const ds = devices(), cnt = t => ds.filter(d => d.type === t).reduce((s, d) => s + (t === "rj" ? d.qty : 1), 0);
+  const L = ds.map(d => ({d, l: lens(d)})), ok = L.filter(x => x.l.raw != null);
+  const total = ok.reduce((s, x) => s + x.l.order * (x.d.type === "rj" ? x.d.qty : 1), 0);
+  const mx = ok.reduce((m, x) => (!m || x.l.raw > m.l.raw) ? x : m, null);
+  const ports = cnt("ap") + cnt("cam") + cnt("rj") + 2;
+  const t = (v, s, bad) => `<div class="tile${bad ? " bad" : ""}"><b>${v}</b><span>${s}</span></div>`;
+  $("tiles").innerHTML = t(cnt("ap"), "bornes WiFi") + t(cnt("cam"), "caméras") + t(cnt("rj"), "prises RJ45") + t(total + " m", "câble à fournir") + t(mx ? f1(mx.l.raw) + " m" : "–", "liaison max." + (mx ? " (" + mx.d.name + ")" : ""), mx && mx.l.raw > 90) + t(ports + " / " + P.ports, "ports utilisés", ports > P.ports);
+  const w = [];
+  if (!BA() && ds.length) w.push("Place la baie pour calculer les câbles.");
+  P.plans.forEach(p => { if (!p.ppm) w.push(`« ${esc(p.name)} » : échelle non définie, longueurs indicatives.`); });
+  const miss = ok.length < L.length ? L.filter(x => x.l.raw == null && BA()).map(x => x.d.plan) : [];
+  [...new Set(miss)].forEach(pid => w.push(`Place une gaine montante sur « ${esc(planOf(pid).name)} ».`));
+  if (BA() && P.plans.length > 1 && !GM(BA().plan)) w.push("Place une gaine montante sur le plan de la baie.");
+  $("warns").innerHTML = w.map(x => `<div class="warn">${x}</div>`).join("");
+  $("rows").innerHTML = L.sort((a, b) => (b.l.raw || -1) - (a.l.raw || -1)).map(x => `<tr class="item${sel === x.d.id ? " sel" : ""}" data-row="${x.d.id}"><td><span class="dot" style="background:${COL[x.d.type]}"></span>${esc(x.d.name)}${x.d.type === "rj" && x.d.qty > 1 ? " ×" + x.d.qty : ""}</td><td>${esc(planOf(x.d.plan).name)}</td><td>${x.l.raw == null ? `<span style="color:var(--muted)">${x.l.why}</span>` : f1(x.l.raw) + " m" + (x.l.raw > 90 ? ' <span class="pill">&gt; 90 m</span>' : "")}</td><td>${x.l.order == null ? "" : x.l.order + " m"}</td></tr>`).join("") || `<tr><td colspan="4" style="color:var(--muted)">Aucun appareil placé.</td></tr>`;
+  const fl = fibreLen(); $("fibre").textContent = fl == null ? "" : `Fibre : arrivée → baie ≈ ${Math.ceil(fl)} m (à prévoir ${Math.ceil(fl * 1.15 + 2)} m).`;
+}
+function planPanel(){
+  const pl = plan();
+  $("planbox").innerHTML = !pl ? `<span style="color:var(--muted)">Ajoute un plan pour commencer.</span>` :
+    `<div class="field" style="grid-template-columns:70px 1fr"><label for="pl-name">Nom</label><input type="text" id="pl-name" value="${esc(pl.name)}"></div>
+     <div class="field" style="grid-template-columns:1fr 80px"><label for="pl-z">Niveau : hauteur du sol (m)</label><input type="number" id="pl-z" step="0.1" value="${pl.z || 0}"></div>
+     <div class="kv"><span>Échelle</span><span>${pl.ppm ? f1(pl.ppm) + " px/m" : "à définir"}</span></div>
+     <div class="field"><label for="pl-op">Opacité du plan</label><input type="range" id="pl-op" min="15" max="100" value="${Math.round((pl.op == null ? .6 : pl.op) * 100)}"><output></output></div>
+     <div class="row"><label class="row" style="font-size:13px"><input type="checkbox" id="pl-cab" ${pl.cables !== false ? "checked" : ""}> Voir les câbles</label><span class="sp"></span><button class="b danger" id="pl-del">Supprimer ce plan</button></div>`;
+}
+function selPanel(){
+  const s = item(sel), box = $("sel");
+  if (!s){ box.innerHTML = `<span style="color:var(--muted)">Clique un élément sur le plan.</span>`; return; }
+  const pl = planOf(s.plan);
+  let h = `<div class="kv"><span>${NAMES[s.type]}</span><span>${esc(s.name || "")}</span></div><div class="kv"><span>Position</span><span>${f1((s.x) / ppm(pl))} m ; ${f1((s.y) / ppm(pl))} m</span></div>`;
+  if (["ap","cam","rj"].includes(s.type)){ const l = lens(s); h += `<div class="field" style="grid-template-columns:70px 1fr"><label for="s-name">Repère</label><input type="text" id="s-name" value="${esc(s.name)}"></div>`; if (l.raw != null) h += `<div class="kv"><span>Câble réel / à prévoir</span><span>${f1(l.raw)} m / ${l.order} m</span></div>`; }
+  if (s.type === "cam"){
+    const fld = (id, lab, mn, mx, v, u) => `<div class="field"><label for="${id}">${lab}</label><input type="range" id="${id}" min="${mn}" max="${mx}" value="${Math.round(v)}"><output id="${id}-o">${Math.round(v)}${u}</output></div>`;
+    h += fld("s-angle", "Direction", 0, 359, ((s.angle % 360) + 360) % 360, "°") + fld("s-fov", "Ouverture", 30, 120, s.fov, "°") + fld("s-r", "Portée", 2, 30, s.r, " m");
+  }
+  if (s.type === "rj") h += `<div class="field" style="grid-template-columns:1fr 64px"><label for="s-qty">Nombre de prises</label><input type="number" id="s-qty" min="1" max="6" value="${s.qty}"></div>`;
+  h += `<div class="row" style="margin-top:8px"><button class="b danger" id="s-del">Retirer</button></div>`;
+  box.innerHTML = h;
+}
+function refresh(){ draw(); panels(); save(); }
+function lite(){ draw(); const s = item(sel); if (s && s.type === "cam"){ [["angle", ((s.angle % 360) + 360) % 360, "°"], ["fov", s.fov, "°"], ["r", s.r, " m"]].forEach(([k, v, u]) => { const o = $("s-" + k + "-o"); if (o) o.textContent = Math.round(v) + u; }); } panelsNoSel(); save(); }
+function panelsNoSel(){ stats(); }
+
+/* ---------- interaction ---------- */
+function toWorld(e){ const p = svg.createSVGPoint(); p.x = e.clientX; p.y = e.clientY; return p.matrixTransform(svg.getScreenCTM().inverse()); }
+function setTool(t){
+  tool = t; scalePts = [];
+  document.querySelectorAll(".tool").forEach(b => b.setAttribute("aria-pressed", b.dataset.tool === t));
+  const hints = {select:"Molette : zoom. Glisser le fond : déplacer le plan. Flèches : déplacer l'élément choisi. Suppr : retirer.", scale:"Clique les deux extrémités d'une cote connue du plan (une porte, une longueur cotée), puis saisis sa longueur réelle.", ap:"Clique sur le plan pour poser une borne WiFi. Échap pour terminer.", cam:"Clique sur le plan pour poser une caméra. Échap pour terminer.", rj:"Clique sur le plan pour poser une prise. Échap pour terminer.", ba:"Clique pour poser la baie (une seule dans le projet).", fib:"Clique pour poser l'arrivée de la fibre.", gm:"Clique pour poser la gaine montante de ce plan (le passage des câbles entre niveaux)."};
+  $("hint").textContent = hints[t]; $("scaleform") && $("scaleform").remove(); draw();
+}
+function nextName(prefix){ let n = 1; while (P.items.some(i => i.name === prefix + n)) n++; return prefix + n; }
+function snapPt(x, y, pl){ if (!$("snap") || !$("snap").checked) return [x, y]; const g = 0.25 * ppm(pl); return [Math.round(x / g) * g, Math.round(y / g) * g]; }
+function place(t, x, y){
+  const pl = plan(); let it; [x, y] = snapPt(x, y, pl);
+  if (["ba","fib","gm"].includes(t)){
+    it = P.items.find(i => i.type === t && (t !== "gm" || i.plan === pl.id));
+    if (it){ it.plan = pl.id; it.x = x; it.y = y; } else { it = {id:uid(), type:t, plan:pl.id, x, y, name:NAMES[t]}; P.items.push(it); }
+  } else {
+    it = {id:uid(), type:t, plan:pl.id, x, y, name: nextName({ap:"AP", cam:"C", rj:"P"}[t])};
+    if (t === "cam") Object.assign(it, {angle:90, fov:70, r:4});
+    if (t === "rj") it.qty = 1;
+    P.items.push(it);
+  }
+  sel = it.id; if (["ba","fib","gm"].includes(t)) setTool("select");
+  return it;
+}
+svg.addEventListener("pointerdown", e => {
+  const pl = plan(); if (!pl) return; const w = toWorld(e); moved = false;
+  const h = e.target.closest("[data-handle]"), t = e.target.closest("[data-id]");
+  svg.setPointerCapture(e.pointerId);
+  if (h){ drag = {mode:"rot", id:h.dataset.handle}; e.preventDefault(); return; }
+  if (tool === "scale"){ if (scalePts.length >= 2) scalePts = []; scalePts.push([w.x, w.y]); if (scalePts.length === 2) scaleForm(); draw(); drag = null; return; }
+  if (t){ sel = t.dataset.id; const i = item(sel); drag = {mode:"move", id:sel, dx:i.x - w.x, dy:i.y - w.y}; refresh(); e.preventDefault(); return; }
+  if (tool !== "select"){ const it = place(tool, w.x, w.y); drag = {mode:"move", id:it.id, dx:0, dy:0}; refresh(); sync(); return; }
+  sel = null; drag = {mode:"pan", sx:e.clientX, sy:e.clientY, vx:view.x, vy:view.y, k:sFactor()}; refresh();
+});
+svg.addEventListener("pointermove", e => {
+  if (!drag) return; moved = true;
+  if (drag.mode === "pan"){ view.x = drag.vx - (e.clientX - drag.sx) * drag.k; view.y = drag.vy - (e.clientY - drag.sy) * drag.k; draw(); return; }
+  const i = item(drag.id), w = toWorld(e), pl = planOf(i.plan);
+  if (drag.mode === "move"){ const q = snapPt(w.x + drag.dx, w.y + drag.dy, pl); i.x = Math.max(0, Math.min(pl.w, q[0])); i.y = Math.max(0, Math.min(pl.h, q[1])); }
+  else i.angle = Math.round(Math.atan2(w.y - i.y, w.x - i.x) * 180 / Math.PI);
+  lite();
+});
+const endDrag = () => { if (drag){ const was = drag; drag = null; if (was.mode !== "pan") { panels(); } save(); } };
+svg.addEventListener("pointerup", endDrag); svg.addEventListener("pointercancel", endDrag);
+svg.addEventListener("wheel", e => { if (!plan()) return; e.preventDefault(); zoom(e.deltaY < 0 ? 1 / 1.15 : 1.15, toWorld(e)); }, {passive:false});
+function zoom(k, c){ if (!view) return; const pl = plan(); c = c || {x:view.x + view.w / 2, y:view.y + view.h / 2}; const nw = Math.max(pl.w / 40, Math.min(pl.w * 3, view.w * k)), r = nw / view.w; view = {x:c.x - (c.x - view.x) * r, y:c.y - (c.y - view.y) * r, w:nw, h:view.h * r}; draw(); }
+$("zin").onclick = () => zoom(1 / 1.3); $("zout").onclick = () => zoom(1.3); $("zfit").onclick = fit;
+window.addEventListener("resize", () => { if (plan()) draw(); });
+document.addEventListener("keydown", e => {
+  if (/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName)) return;
+  if (e.key === "Escape"){ setTool("select"); return; }
+  const s = item(sel); if (!s) return;
+  if (e.key === "Delete" || e.key === "Backspace"){ e.preventDefault(); removeSel(); return; }
+  const st = (e.shiftKey ? 10 : 2) * sFactor(), m = {ArrowLeft:[-st, 0], ArrowRight:[st, 0], ArrowUp:[0, -st], ArrowDown:[0, st]}[e.key];
+  if (m){ e.preventDefault(); s.x += m[0]; s.y += m[1]; refresh(); }
+});
+function removeSel(){ const s = item(sel); if (!s) return; P.items = P.items.filter(i => i.id !== s.id); sel = null; refresh(); }
+document.querySelectorAll(".tool").forEach(b => b.onclick = () => setTool(b.dataset.tool));
+
+function scaleForm(){
+  $("scaleform") && $("scaleform").remove();
+  const d = document.createElement("div"); d.id = "scaleform"; d.className = "row";
+  d.style.cssText = "position:absolute;left:12px;bottom:12px;background:#fff;border:1px solid var(--line);border-radius:8px;padding:8px 10px;z-index:3";
+  d.innerHTML = `<label for="sc-m">Longueur réelle (m)</label><input id="sc-m" type="number" step="0.01" min="0.1" style="width:90px"><button class="b primary" id="sc-ok">Valider</button><button class="b" id="sc-no">Annuler</button>`;
+  $("stage").appendChild(d); $("sc-m").focus();
+  $("sc-ok").onclick = () => { const m = parseFloat($("sc-m").value), pl = plan(); if (!(m > 0)) return; const px = Math.hypot(scalePts[1][0] - scalePts[0][0], scalePts[1][1] - scalePts[0][1]); pl.ppm = px / m; setTool("select"); refresh(); sync(); };
+  $("sc-no").onclick = () => setTool("select");
+}
+
+/* ---------- panneaux : événements délégués ---------- */
+$("tabs").addEventListener("click", e => { const b = e.target.closest("[data-plan]"); if (!b) return; planId = b.dataset.plan; sel = null; sync(); fit(); save(); });
+$("rows").addEventListener("click", e => { const r = e.target.closest("[data-row]"); if (!r) return; const i = item(r.dataset.row); sel = i.id; if (i.plan !== planId){ planId = i.plan; sync(); fit(); } else { draw(); panels(); } });
+document.addEventListener("input", e => {
+  const id = e.target.id, pl = plan(), s = item(sel);
+  if (id === "pname"){ P.name = e.target.value; save(); }
+  if (id === "ports"){ P.ports = Math.max(8, +e.target.value || 48); panelsNoSel(); save(); }
+  if (id === "pl-name"){ pl.name = e.target.value; $("tabs").querySelector(`[data-plan="${pl.id}"]`).textContent = pl.name; save(); }
+  if (id === "pl-z"){ pl.z = parseFloat(e.target.value) || 0; panelsNoSel(); save(); }
+  if (id === "pl-op"){ pl.op = e.target.value / 100; draw(); save(); }
+  if (id === "pl-cab"){ pl.cables = e.target.checked; draw(); save(); }
+  if (id === "s-name" && s){ s.name = e.target.value || s.name; draw(); save(); }
+  if (id === "s-angle" && s){ s.angle = +e.target.value; lite(); }
+  if (id === "s-fov" && s){ s.fov = +e.target.value; lite(); }
+  if (id === "s-r" && s){ s.r = +e.target.value; lite(); }
+  if (id === "s-qty" && s){ s.qty = Math.max(1, Math.min(6, +e.target.value || 1)); panelsNoSel(); save(); }
+});
+document.addEventListener("click", e => {
+  if (e.target.id === "s-del") removeSel();
+  if (e.target.id === "pl-del"){
+    const b = e.target; if (b.dataset.sure !== "1"){ b.dataset.sure = "1"; b.textContent = "Confirmer la suppression"; return; }
+    const pl = plan(); P.items = P.items.filter(i => i.plan !== pl.id); P.plans = P.plans.filter(p => p.id !== pl.id); planId = P.plans.length ? P.plans[0].id : null; sel = null; sync(); if (planId) fit(); else draw(); save();
+  }
+});
+$("newproj").onclick = e => { const b = e.target; if (P.plans.length && b.dataset.sure !== "1"){ b.dataset.sure = "1"; b.textContent = "Tout effacer ?"; setTimeout(() => { b.dataset.sure = ""; b.textContent = "Nouveau"; }, 3000); return; } P = fresh(); planId = null; sel = null; sync(); draw(); save(); b.textContent = "Nouveau"; b.dataset.sure = ""; };
+
+/* ---------- import de plans ---------- */
+function msg(t, id){ $(id || "msg").textContent = t; }
+function readFile(f, type){ return new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result); r.onerror = () => rej(r.error); type === "buf" ? r.readAsArrayBuffer(f) : r.readAsDataURL(f); }); }
+function loadImg(src){ return new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = () => rej(new Error("image illisible")); i.src = src; }); }
+async function addImageFile(f){
+  const src = await readFile(f), im = await loadImg(src), k = Math.min(1, 4000 / Math.max(im.width, im.height));
+  let url = src, w = im.width, h = im.height;
+  if (k < 1){ const c = document.createElement("canvas"); w = Math.round(im.width * k); h = Math.round(im.height * k); c.width = w; c.height = h; c.getContext("2d").drawImage(im, 0, 0, w, h); url = c.toDataURL("image/jpeg", .9); }
+  return [{img:url, w, h, name:f.name.replace(/\.[^.]+$/, "")}];
+}
+let pdfReady = null;
+function loadPdfJs(){
+  if (pdfReady) return pdfReady;
+  pdfReady = new Promise((res, rej) => {
+    const s = document.createElement("script"); s.src = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js";
+    s.onload = () => { try { const wsrc = URL.createObjectURL(new Blob(['importScripts("https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js");'], {type:"text/javascript"})); window.pdfjsLib.GlobalWorkerOptions.workerSrc = wsrc; res(window.pdfjsLib); } catch (e) { rej(e); } };
+    s.onerror = () => rej(new Error("pdf.js indisponible"));
+    document.head.appendChild(s);
+  });
+  return pdfReady;
+}
+async function addPdfFile(f, note){
+  const lib = await loadPdfJs(), buf = await readFile(f, "buf"), doc = await lib.getDocument({data:buf}).promise, out = [];
+  for (let n = 1; n <= Math.min(doc.numPages, 12); n++){
+    note(`Lecture de ${f.name}, page ${n} sur ${doc.numPages}…`);
+    const pg = await doc.getPage(n), v1 = pg.getViewport({scale:1}), k = Math.min(3, 3000 / Math.max(v1.width, v1.height)), v = pg.getViewport({scale:k});
+    const c = document.createElement("canvas"); c.width = Math.round(v.width); c.height = Math.round(v.height);
+    const ctx = c.getContext("2d"); ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, c.width, c.height);
+    await pg.render({canvasContext:ctx, viewport:v}).promise;
+    out.push({img:c.toDataURL("image/jpeg", .9), w:c.width, h:c.height, name: doc.numPages > 1 ? `${f.name.replace(/\.pdf$/i, "")} p.${n}` : f.name.replace(/\.pdf$/i, "")});
+  }
+  return out;
+}
+async function importFiles(files){
+  const note = t => { msg(t); msg(t, "dropmsg"); };
+  let last = null;
+  for (const f of files){
+    try {
+      const pages = /pdf$/i.test(f.type) || /\.pdf$/i.test(f.name) ? await addPdfFile(f, note) : await addImageFile(f);
+      pages.forEach(p => { const pl = {id:uid(), name:p.name, img:p.img, w:p.w, h:p.h, ppm:null, z:0, op:.6}; P.plans.push(pl); last = pl.id; });
+    } catch (err) { note(`Impossible de lire « ${f.name} » : ${err.message}. Pour un PDF, exporte la page en PNG ou JPG et réessaie.`); return; }
+  }
+  if (last){ planId = last; sel = null; sync(); fit(); save(); note("Plan ajouté. Pose l'échelle (outil Échelle) pour avoir des longueurs justes."); }
+}
+["addplan", "addplan2"].forEach(id => $(id).addEventListener("change", e => { importFiles([...e.target.files]); e.target.value = ""; }));
+const stage = $("stage");
+["dragenter", "dragover"].forEach(ev => stage.addEventListener(ev, e => { e.preventDefault(); $("dz").classList.add("over"); }));
+["dragleave", "drop"].forEach(ev => stage.addEventListener(ev, e => { e.preventDefault(); $("dz").classList.remove("over"); }));
+stage.addEventListener("drop", e => { const fs = [...e.dataTransfer.files]; if (fs.length) importFiles(fs); });
+$("openproj").addEventListener("change", async e => {
+  const f = e.target.files[0]; e.target.value = ""; if (!f) return;
+  try { const o = JSON.parse(await f.text()); if (!o.plans || !o.items) throw new Error("fichier de projet non reconnu"); P = {name:o.name || "Projet", ports:o.ports || 48, plans:o.plans, items:o.items}; planId = P.plans[0] ? P.plans[0].id : null; sel = null; sync(); fit(); save(); msg("Projet ouvert."); }
+  catch (err) { msg("Ouverture impossible : " + err.message); }
+});
+
+/* ---------- exports ---------- */
+let dl = null; (async () => { try { dl = window.claude ? await window.claude.use("downloads") : null; } catch (e) { dl = null; } })();
+async function saveFile(name, data){
+  if (!dl){ try { const a = document.createElement("a"); a.href = URL.createObjectURL(data instanceof Blob ? data : new Blob([data])); a.download = name; document.body.appendChild(a); a.click(); a.remove(); msg("Fichier téléchargé : " + name); } catch (e) { msg("Téléchargement impossible : " + e.message); } return; }
+  try { await dl.save({filename:name, data}); msg("Fichier proposé : " + name); } catch (e) { msg(e && e.code === "declined" ? "Enregistrement annulé." : "Export impossible (" + (e && (e.code || e.message)) + ")."); } }
+const slug = s => (s || "projet").normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^a-z0-9]+/gi, "-").replace(/^-|-$/g, "").toLowerCase() || "projet";
+$("x-json").onclick = () => saveFile(slug(P.name) + ".json", JSON.stringify(P));
+$("x-csv").onclick = () => {
+  const rows = [["Repere", "Type", "Plan", "Quantite", "Longueur reelle (m)", "A prevoir (m)"]];
+  devices().forEach(d => { const l = lens(d); rows.push([d.name, NAMES[d.type], planOf(d.plan).name, d.type === "rj" ? d.qty : 1, l.raw == null ? "" : f1(l.raw), l.order == null ? "" : l.order]); });
+  saveFile(slug(P.name) + "-liaisons.csv", "﻿" + rows.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(";")).join("\n"));
+};
+$("x-png").onclick = async () => {
+  const pl = plan(); if (!pl) return; const s = Math.max(1, pl.w / 1500);
+  const x = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${pl.w} ${pl.h}" width="${pl.w}" height="${pl.h}"><rect width="${pl.w}" height="${pl.h}" fill="#fff"/>${render(pl, s, false)}</svg>`;
+  try { const im = await loadImg("data:image/svg+xml;charset=utf-8," + encodeURIComponent(x)), c = document.createElement("canvas"); c.width = pl.w; c.height = pl.h; c.getContext("2d").drawImage(im, 0, 0); c.toBlob(b => saveFile(slug(P.name) + "-" + slug(pl.name) + ".png", b), "image/png"); }
+  catch (e) { msg("Rendu de l'image impossible."); }
+};
+
+$("x-copy").onclick = async () => {
+  const txt = JSON.stringify({name:P.name, ports:P.ports, plans:P.plans.map(({img, ...r}) => r), items:P.items}), ta = $("json"); ta.value = txt;
+  try { await navigator.clipboard.writeText(txt); ta.hidden = true; msg("Configuration copiée. Colle-la dans le chat."); }
+  catch (e) { ta.hidden = false; ta.focus(); ta.select(); msg("Copie bloquée par le navigateur : sélectionne le texte ci-dessous et copie-le."); }
+};
+$("x-clear").onclick = e => { const b = e.target; if (b.dataset.sure !== "1"){ b.dataset.sure = "1"; b.textContent = "Confirmer ?"; setTimeout(() => { b.dataset.sure = ""; b.textContent = "Retirer tous les éléments"; }, 3000); return; } P.items = []; sel = null; b.dataset.sure = ""; b.textContent = "Retirer tous les éléments"; refresh(); };
+
+sync(); restore();
+</script>
+</body>
+</html>
