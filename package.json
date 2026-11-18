@@ -1,7 +1,7 @@
 {
   "name": "atelier-implantation",
   "productName": "Atelier d'implantation",
-  "version": "1.0.0",
+  "version": "1.2.0",
   "description": "Implantation réseau sur plans : bornes WiFi, caméras, prises RJ45, baie, fibre et longueurs de câble.",
   "author": "devben",
   "license": "UNLICENSED",
@@ -36,7 +36,7 @@
           ]
         }
       ],
-      "icon": "build/icon.png"
+      "icon": "build/icon.ico"
     },
     "nsis": {
       "oneClick": false,
@@ -46,7 +46,16 @@
       "createStartMenuShortcut": true,
       "shortcutName": "Atelier d'implantation",
       "language": "1036"
-    }
+    },
+    "fileAssociations": [
+      {
+        "ext": "atelier",
+        "name": "AtelierImplantation.Projet",
+        "description": "Projet Atelier d'implantation",
+        "icon": "icon.ico",
+        "role": "Editor"
+      }
+    ]
   },
   "devDependencies": {
     "electron": "^45.3.4",

@@ -65,6 +65,10 @@ td{padding:3px 7px;border-bottom:1px solid var(--line)} tr.item{cursor:pointer} 
 .dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px}
 .pill{font-size:11px;font-weight:600;padding:1px 6px;border-radius:10px;background:#fee2e2;color:var(--bad)}
 .msg{font-size:12.5px;color:var(--muted);min-height:18px;margin-top:6px}
+.card details>summary{cursor:pointer;list-style:none} .card details>summary::-webkit-details-marker{display:none}
+.card details>summary h3{display:inline} .card details>summary h3::after{content:" ▸"} .card details[open]>summary h3::after{content:" ▾"}
+.prices{display:grid;grid-template-columns:1fr 92px;gap:4px 8px;align-items:center;font-size:13px;margin-top:8px}
+.prices input{text-align:right} .quote td:last-child,.quote th:last-child{text-align:right}
 text.t{paint-order:stroke;stroke:#fff;stroke-width:3px;stroke-linejoin:round;font-family:var(--sans)}
 @media (max-width:980px){body{display:block;height:auto}.layout{grid-template-columns:1fr}.stage{min-height:62vh}}
 </style>
@@ -74,10 +78,14 @@ text.t{paint-order:stroke;stroke:#fff;stroke-width:3px;stroke-linejoin:round;fon
   <h1>Atelier d'implantation</h1>
   <input id="pname" type="text" aria-label="Nom du projet" value="Mon projet">
   <span class="sp"></span>
+  <button class="b" id="undo" title="Annuler (Ctrl+Z)" aria-label="Annuler" disabled>↶ Annuler</button>
+  <button class="b" id="redo" title="Rétablir (Ctrl+Y)" aria-label="Rétablir" disabled>↷ Rétablir</button>
+  <span class="sep"></span>
   <label class="b" for="addplan">+ Ajouter un plan</label>
   <input id="addplan" type="file" accept="application/pdf,image/png,image/jpeg,image/webp" multiple hidden>
-  <label class="b" for="openproj">Ouvrir un projet</label>
-  <input id="openproj" type="file" accept=".json,application/json" hidden>
+  <label class="b" for="openproj" id="openlbl">Ouvrir un projet</label>
+  <input id="openproj" type="file" accept=".atelier,.json,application/json" hidden>
+  <button class="b primary" id="x-json" title="Enregistrer le projet (Ctrl+S)">Enregistrer</button>
   <button class="b" id="newproj">Nouveau</button>
 </header>
 <div class="plans" id="tabs" role="tablist" aria-label="Plans"></div>
@@ -114,25 +122,27 @@ text.t{paint-order:stroke;stroke:#fff;stroke-width:3px;stroke-linejoin:round;fon
       </div>
     </div>
     <div class="hint" id="legend" style="display:flex;gap:14px;flex-wrap:wrap"><span><b style="color:#ea580c">━</b> fibre opérateur</span><span><b style="color:#1d4ed8">━</b> câble Cat6</span><span><b style="color:#9ca3af">━</b> chemin de câbles</span><span><b style="color:#6d28d9">╌</b> 230 V dédié baie</span></div>
-    <div class="hint" id="hint">Molette : zoom. Glisser le fond : déplacer le plan. Flèches : déplacer l'élément choisi. Suppr : retirer.</div>
+    <div class="hint" id="hint">Glisser un câble : le faire passer où tu veux (double-clic sur un coude pour l'enlever). Maj+clic ou Maj+glisser : sélection multiple. Molette : zoom. Suppr : retirer. Ctrl+D : dupliquer. Ctrl+Z : annuler.</div>
   </section>
   <aside>
     <div class="card"><h3>Bilan du projet</h3><div class="tiles" id="tiles"></div><div id="warns"></div>
-      <div class="field" style="grid-template-columns:1fr 70px;margin-top:8px"><label for="ports">Ports du switch</label><input id="ports" type="number" min="8" max="96" value="48"></div></div>
+      <div class="field" style="grid-template-columns:1fr 70px;margin-top:8px"><label for="ports">Ports du switch</label><input id="ports" type="number" min="8" max="96" value="48"></div>
+      <div class="field" style="grid-template-columns:1fr 70px"><label for="poe">Budget PoE du switch (W)</label><input id="poe" type="number" min="0" max="3000" step="10" value="370"></div></div>
     <div class="card"><h3>Ce plan</h3><div id="planbox"></div></div>
     <div class="card"><h3>Élément choisi</h3><div id="sel"><span style="color:var(--muted)">Clique un élément sur le plan.</span></div></div>
     <div class="card"><h3>Liaisons depuis la baie</h3>
       <div class="list"><table><thead><tr><th>Repère</th><th>Plan</th><th>Réel</th><th>À prévoir</th></tr></thead><tbody id="rows"></tbody></table></div>
       <div class="msg" id="fibre"></div></div>
+    <div class="card"><details id="quote"><summary><h3>Chiffrage</h3></summary><div id="pricebox"></div><div id="quotetot"></div></details></div>
     <div class="card"><h3>Enregistrer et exporter</h3>
       <div class="row">
-        <button class="b primary" id="x-json">Projet (.json)</button>
+        <button class="b primary" id="x-pdf" title="Synthèse, matériel, liaisons et plans annotés">Rapport PDF</button>
         <button class="b" id="x-csv">Liaisons (.csv)</button>
         <button class="b" id="x-png">Ce plan (.png)</button>
       </div>
-      <div class="row" style="margin-top:6px"><button class="b" id="x-copy">Copier la configuration</button><button class="b danger" id="x-clear">Retirer tous les éléments</button></div>
+      <div class="row" style="margin-top:6px"><button class="b" id="x-saveas" title="Ctrl+Maj+S">Enregistrer sous…</button><button class="b" id="x-copy">Copier la configuration</button><button class="b danger" id="x-clear">Retirer tous les éléments</button></div>
       <textarea id="json" readonly hidden aria-label="Configuration JSON" style="width:100%;height:90px;margin-top:8px;font:12px/1.4 var(--mono);border:1px solid var(--line);border-radius:6px;padding:6px"></textarea>
-      <div class="msg" id="msg">Le projet se garde seul dans ce navigateur. Le fichier .json le rend portable (plans compris).</div></div>
+      <div class="msg" id="msg">Le projet se garde seul dans ce navigateur. Enregistrer crée un fichier .atelier portable (plans compris).</div></div>
   </aside>
 </div>
 
@@ -144,9 +154,25 @@ const COL = {ap:"#15803d", cam:"#c81e1e", rj:"#1d4ed8", ba:"#111", fib:"#ea580c"
 const NAMES = {ap:"Borne WiFi", cam:"Caméra", rj:"Prise RJ45", ba:"Baie", fib:"Arrivée fibre", gm:"Gaine montante"};
 const uid = () => Math.random().toString(36).slice(2, 9);
 
+let planId = null, sel = null, multi = new Set(), tool = "select", view = null, drag = null, scalePts = [], moved = false;
+const DEF_POE = {ap:15, cam:6.5, rj:0};            // consommation PoE typique (W)
+const poeOf = d => d.poe != null ? d.poe : (DEF_POE[d.type] || 0);
+const PRICE_KEYS = [["ap", "Borne WiFi", "€ / u"], ["cam", "Caméra IP", "€ / u"], ["rj", "Prise RJ45", "€ / prise"], ["ba", "Baie de brassage", "€ / u"],
+  ["sw", "Switch", "€ / u"], ["cable", "Câble Cat6", "€ / m"], ["fibre", "Fibre", "€ / m"], ["pose", "Pose et raccordement", "€ / point"]];
+function defaultPrices(){ let d = {}; try { d = JSON.parse(localStorage.getItem("atelier-tarifs") || "{}"); } catch (e) {} return Object.fromEntries(PRICE_KEYS.map(([k]) => [k, +d[k] || 0])); }
+function fresh(){ return {name:"Mon projet", ports:48, poe:370, tva:20, prices:defaultPrices(), plans:[], items:[]}; }
+// Complète un projet ancien ou importé avec les champs ajoutés depuis.
+function norm(o){ return {name:o.name || "Projet", ports:o.ports || 48, poe:o.poe == null ? 370 : o.poe, tva:o.tva == null ? 20 : o.tva, prices:{...defaultPrices(), ...(o.prices || {})}, plans:o.plans || [], items:o.items || []}; }
 let P = fresh();
-let planId = null, sel = null, tool = "select", view = null, drag = null, scalePts = [], moved = false;
-function fresh(){ return {name:"Mon projet", ports:48, plans:[], items:[]}; }
+/* sélection : `sel` = élément principal, `multi` = sélection multiple (2 éléments ou plus) */
+const selIds = () => multi.size ? [...multi].filter(id => item(id)) : (item(sel) ? [sel] : []);
+const isSel = id => sel === id || multi.has(id);
+function selectOnly(id){ sel = id; multi.clear(); }
+function toggleSel(id){
+  if (!multi.size && sel && sel !== id) multi.add(sel);
+  if (multi.has(id)){ multi.delete(id); if (sel === id) sel = [...multi][0] || null; } else { multi.add(id); sel = id; }
+  if (multi.size === 1){ sel = [...multi][0]; multi.clear(); }
+}
 const plan = () => P.plans.find(p => p.id === planId);
 const item = id => P.items.find(i => i.id === id);
 const ppm = p => p.ppm || p.w / 30;
@@ -156,24 +182,68 @@ const FIB = () => P.items.find(i => i.type === "fib");
 const GM = pid => P.items.find(i => i.type === "gm" && i.plan === pid);
 const planOf = id => P.plans.find(p => p.id === id);
 
+/* ---------- historique (annuler / rétablir) et état du fichier ---------- */
+// Instantané léger : les images des plans (data URL) sont partagées, pas recopiées.
+const undoStack = [], redoStack = [];
+let lastMark = {k:null, t:0}, dirty = false, filePath = "", opened = false;
+const snap = () => ({...P, prices:{...P.prices}, plans:P.plans.map(p => ({...p})), items:P.items.map(i => ({...i, path:i.path && i.path.map(q => [...q])}))});
+function commit(s){ undoStack.push(s); if (undoStack.length > 100) undoStack.shift(); redoStack.length = 0; dirty = true; histUi(); }
+// À appeler juste AVANT une modification. Une même clé dans la seconde (saisie, curseur) = une seule étape.
+function mark(key){
+  const now = Date.now();
+  if (key && key === lastMark.k && now - lastMark.t < 1200){ lastMark.t = now; dirty = true; title(); return; }
+  lastMark = {k:key || null, t:now}; commit(snap());
+}
+function travel(from, to){
+  if (!from.length) return;
+  to.push(snap()); P = from.pop(); lastMark = {k:null, t:0}; dirty = true;
+  const before = planId;
+  if (!planOf(planId)) planId = P.plans[0] ? P.plans[0].id : null;
+  if (!item(sel)) sel = null; multi.clear();
+  sync(); if (planId !== before || !view) fit(); else draw(); save(); histUi();
+}
+const undo = () => travel(undoStack, redoStack), redo = () => travel(redoStack, undoStack);
+function histUi(){ $("undo").disabled = !undoStack.length; $("redo").disabled = !redoStack.length; title(); }
+function title(){ document.title = (P.name || "Projet") + (dirty ? " •" : "") + " — Atelier d'implantation"; }
+// Message d'erreur lisible (retire le préfixe technique ajouté par Electron).
+const errText = e => String((e && e.message) || e).replace(/^Error invoking remote method '[^']+': (\w*Error: )?/, "");
+const inField = () => /INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName) && !["checkbox", "range"].includes(document.activeElement.type);
+
 /* ---------- sauvegarde locale (IndexedDB, au mieux) ---------- */
 let saveT = null, dbp = null;
 function idb(){ if (dbp) return dbp; dbp = new Promise((res, rej) => { try { const r = indexedDB.open("atelier-implantation", 1); r.onupgradeneeded = () => r.result.createObjectStore("p"); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); } catch (e) { rej(e); } }); return dbp; }
-function save(){ clearTimeout(saveT); saveT = setTimeout(async () => { try { const d = await idb(); d.transaction("p", "readwrite").objectStore("p").put({P, planId}, "cur"); } catch (e) {} }, 500); }
-async function restore(){ try { const d = await idb(); const r = d.transaction("p").objectStore("p").get("cur"); r.onsuccess = () => { const v = r.result; if (v && v.P && v.P.plans && v.P.plans.length){ P = v.P; planId = v.planId && planOf(v.planId) ? v.planId : P.plans[0].id; sync(); fit(); } }; } catch (e) {} }
+function save(){ clearTimeout(saveT); saveT = setTimeout(async () => { try { const d = await idb(); d.transaction("p", "readwrite").objectStore("p").put({P, planId, filePath, dirty}, "cur"); } catch (e) {} }, 500); title(); }
+async function restore(){ try { const d = await idb(); const r = d.transaction("p").objectStore("p").get("cur"); r.onsuccess = () => { const v = r.result; if (opened) return; if (v && v.P && v.P.plans && v.P.plans.length){ P = norm(v.P); planId = v.planId && planOf(v.planId) ? v.planId : P.plans[0].id; filePath = v.filePath || ""; dirty = !!v.dirty; sync(); fit(); title(); } }; } catch (e) {} }
 
 /* ---------- câblage ---------- */
 const man = pts => pts.slice(1).reduce((s, p, i) => s + Math.abs(p[0] - pts[i][0]) + Math.abs(p[1] - pts[i][1]), 0);
-function routeOn(d){           // tracé sur le plan de l'appareil
-  const b = BA(), pl = planOf(d.plan); if (!pl) return null;
-  if (b && b.plan === d.plan) return [[b.x, b.y], [d.x, b.y], [d.x, d.y]];
-  const g = GM(d.plan); if (g) return [[g.x, g.y], [d.x, g.y], [d.x, d.y]];
-  return null;
+const plen = pts => pts.slice(1).reduce((s, p, i) => s + Math.hypot(p[0] - pts[i][0], p[1] - pts[i][1]), 0);
+// Départ du câble sur le plan de l'appareil : la baie si elle y est, sinon la gaine montante.
+function routeStart(d){ const b = BA(); if (b && b.plan === d.plan) return [b.x, b.y]; const g = GM(d.plan); return g ? [g.x, g.y] : null; }
+// Tracé sur le plan de l'appareil : coudes choisis par l'utilisateur (d.path), sinon équerre automatique.
+function routeOn(d){
+  if (!planOf(d.plan)) return null; const s0 = routeStart(d); if (!s0) return null;
+  if (d.path && d.path.length) return [s0, ...d.path, [d.x, d.y]];
+  return [s0, [d.x, s0[1]], [d.x, d.y]];
+}
+function segDist(p, a, b){
+  const dx = b[0] - a[0], dy = b[1] - a[1], L = dx * dx + dy * dy;
+  const t = L ? Math.max(0, Math.min(1, ((p[0] - a[0]) * dx + (p[1] - a[1]) * dy) / L)) : 0;
+  return Math.hypot(p[0] - a[0] - t * dx, p[1] - a[1] - t * dy);
+}
+function nearestSeg(pts, p){ let k = 0, bd = Infinity; for (let i = 0; i < pts.length - 1; i++){ const d = segDist(p, pts[i], pts[i + 1]); if (d < bd){ bd = d; k = i; } } return k; }
+// Ajoute un coude sur le segment k du tracé (le tracé automatique devient personnalisé).
+function bend(d, k, pt){ const pts = routeOn(d); d.path = pts.slice(1, -1).map(q => [...q]); d.path.splice(k, 0, pt); }
+// Position d'un coude : grille éventuelle, puis alignement sur les points voisins (angles droits faciles).
+function alignPt(d, k, w, pl){
+  let [x, y] = snapPt(w.x, w.y, pl); const pts = routeOn(d), tol = 8 * sFactor();
+  [pts[k], pts[k + 2]].forEach(n => { if (!n) return; if (Math.abs(x - n[0]) < tol) x = n[0]; if (Math.abs(y - n[1]) < tol) y = n[1]; });
+  return [Math.max(0, Math.min(pl.w, x)), Math.max(0, Math.min(pl.h, y))];
 }
 function lens(d){
   const b = BA(), pl = planOf(d.plan), pts = routeOn(d), a = d.type === "rj" ? 2.5 : 1.5;
   if (!b || !pts) return {raw:null, order:null, why: !b ? "baie manquante" : "gaine manquante"};
-  let m = man(pts) / ppm(pl) + a;
+  let m = plen(pts) / ppm(pl) + a;
   if (b.plan !== d.plan){
     const pb = planOf(b.plan), gb = GM(b.plan);
     if (!gb) return {raw:null, order:null, why:"gaine manquante (plan de la baie)"};
@@ -214,6 +284,11 @@ function render(pl, s, interactive){
   if (pl.cables !== false){
     devs.forEach(d => { const r = routeOn(d); if (r) out.push(poly(r, `stroke="#9ca3af" stroke-width="${6}" opacity=".35"`)); });
     devs.forEach(d => { const r = routeOn(d); if (r) out.push(poly(r, `stroke="#1d4ed8" stroke-width="1.2" opacity=".8"`)); });
+    if (interactive){
+      devs.forEach(d => { const r = routeOn(d); if (r && isSel(d.id)) out.push(poly(r, `stroke="#1d4ed8" stroke-width="3.2"`)); });
+      // zones de prise des câbles (invisibles, plus larges que le trait)
+      if (tool === "select") devs.forEach(d => { const r = routeOn(d); if (r) out.push(`<polyline data-cable="${d.id}" points="${r.map(p => p.join(",")).join(" ")}" fill="none" stroke="transparent" stroke-width="${12 * s}" pointer-events="stroke" style="cursor:move"/>`); });
+    }
     if (b && b.plan === pl.id && f && f.plan === pl.id) out.push(poly([[f.x, f.y], [b.x, f.y], [b.x, b.y]], `stroke="#ea580c" stroke-width="3.2"`));
     if (f && f.plan === pl.id && b && b.plan !== pl.id && g) out.push(poly([[f.x, f.y], [g.x, f.y], [g.x, g.y]], `stroke="#ea580c" stroke-width="3.2"`));
     if (b && b.plan === pl.id && g && P.plans.length > 1){
@@ -227,13 +302,28 @@ function render(pl, s, interactive){
   });
   if (b && b.plan !== pl.id) {} // la baie n'apparaît que sur son plan
   P.items.filter(i => i.plan === pl.id).forEach(i => {
-    out.push(`<g ${interactive ? `data-id="${i.id}" style="cursor:grab"` : ""} transform="translate(${i.x},${i.y}) scale(${s})">${symbol(i, interactive && sel === i.id)}${label(i, pl)}</g>`);
+    out.push(`<g ${interactive ? `data-id="${i.id}" style="cursor:grab"` : ""} transform="translate(${i.x},${i.y}) scale(${s})">${symbol(i, interactive && isSel(i.id))}${label(i, pl)}</g>`);
   });
   const c = item(sel);
   if (interactive && c && c.type === "cam" && c.plan === pl.id){
     const r = c.r * ppm(pl) + 14 * s, a = c.angle * Math.PI / 180, hx = c.x + r * Math.cos(a), hy = c.y + r * Math.sin(a);
     out.push(`<line x1="${c.x}" y1="${c.y}" x2="${hx}" y2="${hy}" stroke="#0f172a" stroke-width="1" stroke-dasharray="2 3" pointer-events="none" vector-effect="non-scaling-stroke"/>`);
     out.push(`<circle data-handle="${c.id}" cx="${hx}" cy="${hy}" r="${7 * s}" fill="#fff" stroke="#0f172a" stroke-width="${1.8 * s}" style="cursor:crosshair"/>`);
+  }
+  // poignées du câble de l'appareil choisi : coudes (blancs) et milieux de segment (bleus) pour en ajouter
+  if (interactive && c && !multi.size && ["ap","cam","rj"].includes(c.type) && c.plan === pl.id && pl.cables !== false && tool === "select"){
+    const r = routeOn(c);
+    if (r){
+      for (let k = 0; k < r.length - 1; k++){
+        const a = r[k], z = r[k + 1];
+        if (Math.hypot(z[0] - a[0], z[1] - a[1]) > 28 * s) out.push(`<circle data-mid="${c.id}:${k}" cx="${(a[0] + z[0]) / 2}" cy="${(a[1] + z[1]) / 2}" r="${4.5 * s}" fill="#1d4ed8" fill-opacity=".55" stroke="#fff" stroke-width="${1.2 * s}" style="cursor:copy"><title>Glisser pour ajouter un coude</title></circle>`);
+      }
+      (c.path || []).forEach((p, k) => out.push(`<circle data-wp="${c.id}:${k}" cx="${p[0]}" cy="${p[1]}" r="${6 * s}" fill="#fff" stroke="#1d4ed8" stroke-width="${2 * s}" style="cursor:move"><title>Glisser pour déplacer · double-clic pour enlever</title></circle>`));
+    }
+  }
+  if (interactive && drag && drag.mode === "band"){
+    const x = Math.min(drag.a[0], drag.b[0]), y = Math.min(drag.a[1], drag.b[1]);
+    out.push(`<rect x="${x}" y="${y}" width="${Math.abs(drag.b[0] - drag.a[0])}" height="${Math.abs(drag.b[1] - drag.a[1])}" fill="rgba(29,78,216,.08)" stroke="#1d4ed8" stroke-dasharray="5 4" vector-effect="non-scaling-stroke" pointer-events="none"/>`);
   }
   if (interactive && tool === "scale" && scalePts.length){
     const q = scalePts;
@@ -250,29 +340,39 @@ function fit(){ const pl = plan(); if (!pl) return; view = {x:0, y:0, w:pl.w, h:
 
 /* ---------- panneaux ---------- */
 function sync(){
-  $("pname").value = P.name; $("ports").value = P.ports;
+  $("pname").value = P.name; $("ports").value = P.ports; $("poe").value = P.poe; pricePanel();
   $("drop").style.display = P.plans.length ? "none" : "flex";
   $("tabs").innerHTML = P.plans.map(p => `<button class="tab" role="tab" data-plan="${p.id}" aria-selected="${p.id === planId}">${esc(p.name)}</button>`).join("");
   panels();
 }
 function panels(){ stats(); planPanel(); selPanel(); }
-function stats(){
+const TOURET = 305;   // longueur d'une bobine de câble Cat6
+function bilan(){
   const ds = devices(), cnt = t => ds.filter(d => d.type === t).reduce((s, d) => s + (t === "rj" ? d.qty : 1), 0);
   const L = ds.map(d => ({d, l: lens(d)})), ok = L.filter(x => x.l.raw != null);
   const total = ok.reduce((s, x) => s + x.l.order * (x.d.type === "rj" ? x.d.qty : 1), 0);
   const mx = ok.reduce((m, x) => (!m || x.l.raw > m.l.raw) ? x : m, null);
   const ports = cnt("ap") + cnt("cam") + cnt("rj") + 2;
-  const t = (v, s, bad) => `<div class="tile${bad ? " bad" : ""}"><b>${v}</b><span>${s}</span></div>`;
-  $("tiles").innerHTML = t(cnt("ap"), "bornes WiFi") + t(cnt("cam"), "caméras") + t(cnt("rj"), "prises RJ45") + t(total + " m", "câble à fournir") + t(mx ? f1(mx.l.raw) + " m" : "–", "liaison max." + (mx ? " (" + mx.d.name + ")" : ""), mx && mx.l.raw > 90) + t(ports + " / " + P.ports, "ports utilisés", ports > P.ports);
+  const poeUsed = ds.reduce((s, d) => s + poeOf(d), 0);
   const w = [];
+  if (poeUsed > P.poe) w.push(`Budget PoE dépassé : ${f1(poeUsed)} W demandés pour ${P.poe} W disponibles sur le switch.`);
   if (!BA() && ds.length) w.push("Place la baie pour calculer les câbles.");
   P.plans.forEach(p => { if (!p.ppm) w.push(`« ${esc(p.name)} » : échelle non définie, longueurs indicatives.`); });
   const miss = ok.length < L.length ? L.filter(x => x.l.raw == null && BA()).map(x => x.d.plan) : [];
   [...new Set(miss)].forEach(pid => w.push(`Place une gaine montante sur « ${esc(planOf(pid).name)} ».`));
   if (BA() && P.plans.length > 1 && !GM(BA().plan)) w.push("Place une gaine montante sur le plan de la baie.");
+  L.sort((a, b) => (b.l.raw || -1) - (a.l.raw || -1));
+  return {cnt, L, ok, total, mx, ports, poeUsed, w, tourets: Math.ceil(total / TOURET), fl: fibreLen()};
+}
+function stats(){
+  const B = bilan(), {cnt, L, total, mx, ports, w, tourets, fl} = B, Q = chiffrage(B);
+  const t = (v, s, bad) => `<div class="tile${bad ? " bad" : ""}"><b>${v}</b><span>${s}</span></div>`;
+  $("tiles").innerHTML = t(cnt("ap"), "bornes WiFi") + t(cnt("cam"), "caméras") + t(cnt("rj"), "prises RJ45") + t(total + " m", "câble à fournir") + t(mx ? f1(mx.l.raw) + " m" : "–", "liaison max." + (mx ? " (" + mx.d.name + ")" : ""), mx && mx.l.raw > 90) + t(ports + " / " + P.ports, "ports utilisés", ports > P.ports) + t(f1(B.poeUsed) + " / " + P.poe + " W", "PoE utilisé", B.poeUsed > P.poe) + t(tourets, "touret" + (tourets > 1 ? "s" : "") + " de " + TOURET + " m") + t(Q.ht ? eur(Q.ht) : "–", Q.ht ? "estimation HT" : "chiffrage : saisis les prix");
+  quoteTotals(Q);
   $("warns").innerHTML = w.map(x => `<div class="warn">${x}</div>`).join("");
-  $("rows").innerHTML = L.sort((a, b) => (b.l.raw || -1) - (a.l.raw || -1)).map(x => `<tr class="item${sel === x.d.id ? " sel" : ""}" data-row="${x.d.id}"><td><span class="dot" style="background:${COL[x.d.type]}"></span>${esc(x.d.name)}${x.d.type === "rj" && x.d.qty > 1 ? " ×" + x.d.qty : ""}</td><td>${esc(planOf(x.d.plan).name)}</td><td>${x.l.raw == null ? `<span style="color:var(--muted)">${x.l.why}</span>` : f1(x.l.raw) + " m" + (x.l.raw > 90 ? ' <span class="pill">&gt; 90 m</span>' : "")}</td><td>${x.l.order == null ? "" : x.l.order + " m"}</td></tr>`).join("") || `<tr><td colspan="4" style="color:var(--muted)">Aucun appareil placé.</td></tr>`;
-  const fl = fibreLen(); $("fibre").textContent = fl == null ? "" : `Fibre : arrivée → baie ≈ ${Math.ceil(fl)} m (à prévoir ${Math.ceil(fl * 1.15 + 2)} m).`;
+  $("rows").innerHTML = L.map(x => `<tr class="item${isSel(x.d.id) ? " sel" : ""}" data-row="${x.d.id}"><td><span class="dot" style="background:${COL[x.d.type]}"></span>${esc(x.d.name)}${x.d.type === "rj" && x.d.qty > 1 ? " ×" + x.d.qty : ""}</td><td>${esc(planOf(x.d.plan).name)}</td><td>${x.l.raw == null ? `<span style="color:var(--muted)">${x.l.why}</span>` : f1(x.l.raw) + " m" + (x.l.raw > 90 ? ' <span class="pill">&gt; 90 m</span>' : "")}</td><td>${x.l.order == null ? "" : x.l.order + " m"}</td></tr>`).join("") || `<tr><td colspan="4" style="color:var(--muted)">Aucun appareil placé.</td></tr>`;
+  $("fibre").innerHTML = [total ? `Câble Cat6 : ${total} m, soit ${tourets} touret${tourets > 1 ? "s" : ""} de ${TOURET} m.` : "",
+    fl == null ? "" : `Fibre : arrivée → baie ≈ ${Math.ceil(fl)} m (à prévoir ${Math.ceil(fl * 1.15 + 2)} m).`].filter(Boolean).join("<br>");
 }
 function planPanel(){
   const pl = plan();
@@ -285,6 +385,7 @@ function planPanel(){
 }
 function selPanel(){
   const s = item(sel), box = $("sel");
+  if (multi.size > 1) return multiPanel(box);
   if (!s){ box.innerHTML = `<span style="color:var(--muted)">Clique un élément sur le plan.</span>`; return; }
   const pl = planOf(s.plan);
   let h = `<div class="kv"><span>${NAMES[s.type]}</span><span>${esc(s.name || "")}</span></div><div class="kv"><span>Position</span><span>${f1((s.x) / ppm(pl))} m ; ${f1((s.y) / ppm(pl))} m</span></div>`;
@@ -294,8 +395,47 @@ function selPanel(){
     h += fld("s-angle", "Direction", 0, 359, ((s.angle % 360) + 360) % 360, "°") + fld("s-fov", "Ouverture", 30, 120, s.fov, "°") + fld("s-r", "Portée", 2, 30, s.r, " m");
   }
   if (s.type === "rj") h += `<div class="field" style="grid-template-columns:1fr 64px"><label for="s-qty">Nombre de prises</label><input type="number" id="s-qty" min="1" max="6" value="${s.qty}"></div>`;
-  h += `<div class="row" style="margin-top:8px"><button class="b danger" id="s-del">Retirer</button></div>`;
+  if (s.type === "ap" || s.type === "cam") h += `<div class="field" style="grid-template-columns:1fr 64px"><label for="s-poe">Consommation PoE (W)</label><input type="number" id="s-poe" min="0" max="90" step="0.5" value="${poeOf(s)}"></div>`;
+  if (["ap","cam","rj"].includes(s.type) && routeOn(s)) h += `<div class="kv"><span>Tracé du câble</span><span>${s.path && s.path.length ? s.path.length + " coude" + (s.path.length > 1 ? "s" : "") + " posé" + (s.path.length > 1 ? "s" : "") : "automatique"}</span></div>`;
+  h += `<div class="row" style="margin-top:8px">${["ap","cam","rj"].includes(s.type) ? `<button class="b" id="s-dup" title="Ctrl+D">Dupliquer</button>` : ""}${s.path && s.path.length ? `<button class="b" id="s-auto">Tracé automatique</button>` : ""}<button class="b danger" id="s-del">Retirer</button></div>`;
   box.innerHTML = h;
+}
+function multiPanel(box){
+  const its = selIds().map(item), cnt = t => its.filter(i => i.type === t).length, devs = its.filter(i => ["ap","cam","rj"].includes(i.type));
+  const same = (arr, f) => arr.length && arr.every(i => f(i) === f(arr[0])) ? f(arr[0]) : "";
+  const rjs = its.filter(i => i.type === "rj"), pw = its.filter(i => i.type === "ap" || i.type === "cam");
+  const ls = devs.map(lens).filter(l => l.raw != null);
+  let h = `<div class="kv"><span>${its.length} éléments choisis</span><span>${[["ap", "AP"], ["cam", "cam."], ["rj", "prise"]].filter(([t]) => cnt(t)).map(([t, n]) => cnt(t) + " " + n).join(" · ")}</span></div>`;
+  if (ls.length) h += `<div class="kv"><span>Câble à prévoir</span><span>${ls.reduce((a, l) => a + l.order, 0)} m</span></div>`;
+  if (rjs.length) h += `<div class="field" style="grid-template-columns:1fr 60px auto"><label for="m-qty">Prises par point</label><input type="number" id="m-qty" min="1" max="6" value="${same(rjs, i => i.qty)}"><button class="b" id="m-qty-ok">Appliquer</button></div>`;
+  if (pw.length) h += `<div class="field" style="grid-template-columns:1fr 60px auto"><label for="m-poe">PoE par appareil (W)</label><input type="number" id="m-poe" min="0" max="90" step="0.5" value="${same(pw, poeOf)}"><button class="b" id="m-poe-ok">Appliquer</button></div>`;
+  h += `<div class="row" style="margin-top:8px">${devs.length ? `<button class="b" id="s-dup" title="Ctrl+D">Dupliquer</button>` : ""}${devs.some(i => i.path && i.path.length) ? `<button class="b" id="s-auto">Tracés automatiques</button>` : ""}<button class="b danger" id="s-del">Retirer la sélection</button></div>`;
+  box.innerHTML = h;
+}
+/* ---------- chiffrage ---------- */
+const eur = v => v.toLocaleString("fr-FR", {style:"currency", currency:"EUR", minimumFractionDigits:0, maximumFractionDigits:2});
+function chiffrage(B){
+  const pr = P.prices || {}, b = BA(), fib = B.fl == null ? 0 : Math.ceil(B.fl * 1.15 + 2);
+  const lines = [
+    ["Borne WiFi", B.cnt("ap"), "u", pr.ap], ["Caméra IP", B.cnt("cam"), "u", pr.cam], ["Prise RJ45", B.cnt("rj"), "u", pr.rj],
+    ["Baie de brassage", b ? 1 : 0, "u", pr.ba], [`Switch ${P.ports} ports`, devices().length ? 1 : 0, "u", pr.sw],
+    ["Câble Cat6", B.total, "m", pr.cable], ["Fibre opérateur", fib, "m", pr.fibre],
+    ["Pose et raccordement", B.cnt("ap") + B.cnt("cam") + B.cnt("rj"), "pt", pr.pose],
+  ].map(([lib, q, u, p]) => ({lib, q, u, p:+p || 0, t:q * (+p || 0)})).filter(l => l.q);
+  const ht = lines.reduce((a, l) => a + l.t, 0), tva = ht * (+P.tva || 0) / 100;
+  return {lines, ht, tva, ttc:ht + tva};
+}
+// Champs des prix : rendus seulement au chargement du projet (pour ne pas perdre le curseur pendant la saisie).
+function pricePanel(){
+  const pr = P.prices || {};
+  $("pricebox").innerHTML = `<div class="prices">${PRICE_KEYS.map(([k, lab, u]) => `<label for="pr-${k}">${lab} <span style="color:var(--muted);font-size:11.5px">${u}</span></label><input type="number" id="pr-${k}" min="0" step="0.01" value="${pr[k] || ""}" placeholder="0">`).join("")}
+    <label for="tva">TVA (%)</label><input type="number" id="tva" min="0" max="100" step="0.1" value="${P.tva}"></div>
+    <div class="row" style="margin-top:8px"><button class="b" id="pr-def" title="Les nouveaux projets partiront de ces prix">Retenir comme tarifs par défaut</button></div>`;
+}
+function quoteTotals(Q){
+  $("quotetot").innerHTML = !Q.lines.length ? "" : `<div class="list" style="margin-top:8px;max-height:none"><table class="quote"><tbody>
+    ${Q.lines.filter(l => l.t).map(l => `<tr><td>${l.lib}</td><td>${l.q} ${l.u}</td><td>${eur(l.t)}</td></tr>`).join("")}
+    <tr><th colspan="2">Total HT</th><th>${eur(Q.ht)}</th></tr><tr><td colspan="2">TVA ${P.tva} %</td><td>${eur(Q.tva)}</td></tr><tr><th colspan="2">Total TTC</th><th>${eur(Q.ttc)}</th></tr></tbody></table></div>`;
 }
 function refresh(){ draw(); panels(); save(); }
 function lite(){ draw(); const s = item(sel); if (s && s.type === "cam"){ [["angle", ((s.angle % 360) + 360) % 360, "°"], ["fov", s.fov, "°"], ["r", s.r, " m"]].forEach(([k, v, u]) => { const o = $("s-" + k + "-o"); if (o) o.textContent = Math.round(v) + u; }); } panelsNoSel(); save(); }
@@ -306,7 +446,7 @@ function toWorld(e){ const p = svg.createSVGPoint(); p.x = e.clientX; p.y = e.cl
 function setTool(t){
   tool = t; scalePts = [];
   document.querySelectorAll(".tool").forEach(b => b.setAttribute("aria-pressed", b.dataset.tool === t));
-  const hints = {select:"Molette : zoom. Glisser le fond : déplacer le plan. Flèches : déplacer l'élément choisi. Suppr : retirer.", scale:"Clique les deux extrémités d'une cote connue du plan (une porte, une longueur cotée), puis saisis sa longueur réelle.", ap:"Clique sur le plan pour poser une borne WiFi. Échap pour terminer.", cam:"Clique sur le plan pour poser une caméra. Échap pour terminer.", rj:"Clique sur le plan pour poser une prise. Échap pour terminer.", ba:"Clique pour poser la baie (une seule dans le projet).", fib:"Clique pour poser l'arrivée de la fibre.", gm:"Clique pour poser la gaine montante de ce plan (le passage des câbles entre niveaux)."};
+  const hints = {select:"Glisser un câble : le faire passer où tu veux (double-clic sur un coude pour l'enlever). Maj+clic ou Maj+glisser : sélection multiple. Molette : zoom. Suppr : retirer. Ctrl+D : dupliquer. Ctrl+Z : annuler.", scale:"Clique les deux extrémités d'une cote connue du plan (une porte, une longueur cotée), puis saisis sa longueur réelle.", ap:"Clique sur le plan pour poser une borne WiFi. Échap pour terminer.", cam:"Clique sur le plan pour poser une caméra. Échap pour terminer.", rj:"Clique sur le plan pour poser une prise. Échap pour terminer.", ba:"Clique pour poser la baie (une seule dans le projet).", fib:"Clique pour poser l'arrivée de la fibre.", gm:"Clique pour poser la gaine montante de ce plan (le passage des câbles entre niveaux)."};
   $("hint").textContent = hints[t]; $("scaleform") && $("scaleform").remove(); draw();
 }
 function nextName(prefix){ let n = 1; while (P.items.some(i => i.name === prefix + n)) n++; return prefix + n; }
@@ -326,39 +466,106 @@ function place(t, x, y){
   return it;
 }
 svg.addEventListener("pointerdown", e => {
-  const pl = plan(); if (!pl) return; const w = toWorld(e); moved = false;
+  const pl = plan(); if (!pl || e.button > 0) return; const w = toWorld(e); moved = false;
   const h = e.target.closest("[data-handle]"), t = e.target.closest("[data-id]");
+  const wp = e.target.closest("[data-wp]"), mid = e.target.closest("[data-mid]"), cab = e.target.closest("[data-cable]");
   svg.setPointerCapture(e.pointerId);
-  if (h){ drag = {mode:"rot", id:h.dataset.handle}; e.preventDefault(); return; }
+  if (h){ drag = {mode:"rot", id:h.dataset.handle, before:snap()}; e.preventDefault(); return; }
   if (tool === "scale"){ if (scalePts.length >= 2) scalePts = []; scalePts.push([w.x, w.y]); if (scalePts.length === 2) scaleForm(); draw(); drag = null; return; }
-  if (t){ sel = t.dataset.id; const i = item(sel); drag = {mode:"move", id:sel, dx:i.x - w.x, dy:i.y - w.y}; refresh(); e.preventDefault(); return; }
-  if (tool !== "select"){ const it = place(tool, w.x, w.y); drag = {mode:"move", id:it.id, dx:0, dy:0}; refresh(); sync(); return; }
-  sel = null; drag = {mode:"pan", sx:e.clientX, sy:e.clientY, vx:view.x, vy:view.y, k:sFactor()}; refresh();
+  if (wp){ const [id, k] = wp.dataset.wp.split(":"); drag = {mode:"wp", id, k:+k, before:snap()}; e.preventDefault(); return; }
+  if (mid){ const [id, k] = mid.dataset.mid.split(":"), before = snap(); bend(item(id), +k, [w.x, w.y]); drag = {mode:"wp", id, k:+k, before}; moved = true; draw(); e.preventDefault(); return; }
+  if (t){
+    const id = t.dataset.id;
+    if (e.shiftKey){ toggleSel(id); drag = null; refresh(); e.preventDefault(); return; }
+    if (!multi.has(id)) selectOnly(id);
+    const grp = selIds().filter(x => item(x).plan === pl.id);
+    if (grp.length > 1) drag = {mode:"group", sx:w.x, sy:w.y, orig:grp.map(x => [x, item(x).x, item(x).y]), before:snap()};
+    else { sel = id; const i = item(id); drag = {mode:"move", id, dx:i.x - w.x, dy:i.y - w.y, before:snap()}; }
+    refresh(); e.preventDefault(); return;
+  }
+  if (cab){ const id = cab.dataset.cable; selectOnly(id); drag = {mode:"cable", id, at:[w.x, w.y], cx:e.clientX, cy:e.clientY, before:snap()}; refresh(); e.preventDefault(); return; }
+  if (tool !== "select"){ mark(); const it = place(tool, w.x, w.y); drag = {mode:"move", id:it.id, dx:0, dy:0}; refresh(); sync(); return; }
+  if (e.shiftKey){ drag = {mode:"band", a:[w.x, w.y], b:[w.x, w.y], add:selIds()}; return; }
+  sel = null; multi.clear(); drag = {mode:"pan", sx:e.clientX, sy:e.clientY, vx:view.x, vy:view.y, k:sFactor()}; refresh();
 });
 svg.addEventListener("pointermove", e => {
   if (!drag) return; moved = true;
   if (drag.mode === "pan"){ view.x = drag.vx - (e.clientX - drag.sx) * drag.k; view.y = drag.vy - (e.clientY - drag.sy) * drag.k; draw(); return; }
-  const i = item(drag.id), w = toWorld(e), pl = planOf(i.plan);
+  const w = toWorld(e);
+  if (drag.mode === "band"){ drag.b = [w.x, w.y]; draw(); return; }
+  if (drag.mode === "group"){
+    const dx = w.x - drag.sx, dy = w.y - drag.sy;
+    drag.orig.forEach(([id, x, y]) => { const i = item(id), p2 = planOf(i.plan); i.x = Math.max(0, Math.min(p2.w, x + dx)); i.y = Math.max(0, Math.min(p2.h, y + dy)); });
+    lite(); return;
+  }
+  if (drag.mode === "cable"){
+    if (Math.hypot(e.clientX - drag.cx, e.clientY - drag.cy) < 4) return;   // simple clic = sélection
+    const d = item(drag.id), pts = routeOn(d); if (!pts){ drag = null; return; }
+    const k = nearestSeg(pts, drag.at); bend(d, k, drag.at); drag = {...drag, mode:"wp", k};
+  }
+  if (drag.mode === "wp"){ const d = item(drag.id); d.path[drag.k] = alignPt(d, drag.k, w, planOf(d.plan)); lite(); return; }
+  const i = item(drag.id), pl = planOf(i.plan);
   if (drag.mode === "move"){ const q = snapPt(w.x + drag.dx, w.y + drag.dy, pl); i.x = Math.max(0, Math.min(pl.w, q[0])); i.y = Math.max(0, Math.min(pl.h, q[1])); }
   else i.angle = Math.round(Math.atan2(w.y - i.y, w.x - i.x) * 180 / Math.PI);
   lite();
 });
-const endDrag = () => { if (drag){ const was = drag; drag = null; if (was.mode !== "pan") { panels(); } save(); } };
+const endDrag = () => {
+  if (!drag) return; const was = drag; drag = null;
+  if (was.mode === "band"){
+    const x1 = Math.min(was.a[0], was.b[0]), x2 = Math.max(was.a[0], was.b[0]), y1 = Math.min(was.a[1], was.b[1]), y2 = Math.max(was.a[1], was.b[1]);
+    const ids = P.items.filter(i => i.plan === planId && i.x >= x1 && i.x <= x2 && i.y >= y1 && i.y <= y2).map(i => i.id);
+    const all = new Set([...was.add, ...ids]); multi = all.size > 1 ? all : new Set(); sel = ids[ids.length - 1] || [...all][0] || null;
+    refresh(); return;
+  }
+  if (was.mode !== "pan"){ if (was.before && moved && was.mode !== "cable"){ commit(was.before); lastMark = {k:null, t:0}; } panels(); }
+  save();
+};
+// Double-clic (ou clic droit) sur un coude : l'enlever. Plus de coude = retour au tracé automatique.
+function dropWp(e){
+  // la capture du pointeur redirige le double-clic vers le <svg> : retrouver le coude sous la souris
+  const under = document.elementFromPoint(e.clientX, e.clientY), wp = under && under.closest("[data-wp]"); if (!wp) return; e.preventDefault();
+  const [id, k] = wp.dataset.wp.split(":"), d = item(id); if (!d || !d.path) return;
+  mark(); d.path.splice(+k, 1); if (!d.path.length) delete d.path; refresh();
+}
+svg.addEventListener("dblclick", dropWp); svg.addEventListener("contextmenu", dropWp);
 svg.addEventListener("pointerup", endDrag); svg.addEventListener("pointercancel", endDrag);
 svg.addEventListener("wheel", e => { if (!plan()) return; e.preventDefault(); zoom(e.deltaY < 0 ? 1 / 1.15 : 1.15, toWorld(e)); }, {passive:false});
 function zoom(k, c){ if (!view) return; const pl = plan(); c = c || {x:view.x + view.w / 2, y:view.y + view.h / 2}; const nw = Math.max(pl.w / 40, Math.min(pl.w * 3, view.w * k)), r = nw / view.w; view = {x:c.x - (c.x - view.x) * r, y:c.y - (c.y - view.y) * r, w:nw, h:view.h * r}; draw(); }
 $("zin").onclick = () => zoom(1 / 1.3); $("zout").onclick = () => zoom(1.3); $("zfit").onclick = fit;
 window.addEventListener("resize", () => { if (plan()) draw(); });
 document.addEventListener("keydown", e => {
+  if ((e.ctrlKey || e.metaKey) && !e.altKey){
+    const k = e.key.toLowerCase();
+    if (k === "s"){ e.preventDefault(); saveProject(e.shiftKey); return; }
+    if (k === "o"){ e.preventDefault(); openProject(); return; }
+    if (!inField()){
+      if (k === "z" && !e.shiftKey){ e.preventDefault(); undo(); return; }
+      if (k === "y" || (k === "z" && e.shiftKey)){ e.preventDefault(); redo(); return; }
+      if (k === "d"){ e.preventDefault(); duplicate(); return; }
+      if (k === "a"){ e.preventDefault(); const ids = P.items.filter(i => i.plan === planId && ["ap","cam","rj"].includes(i.type)).map(i => i.id); multi = new Set(ids.length > 1 ? ids : []); sel = ids[0] || null; refresh(); return; }
+    }
+  }
   if (/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName)) return;
-  if (e.key === "Escape"){ setTool("select"); return; }
-  const s = item(sel); if (!s) return;
+  if (e.key === "Escape"){ if (tool === "select" && selIds().length){ sel = null; multi.clear(); refresh(); } setTool("select"); return; }
+  const ids = selIds(); if (!ids.length) return;
   if (e.key === "Delete" || e.key === "Backspace"){ e.preventDefault(); removeSel(); return; }
   const st = (e.shiftKey ? 10 : 2) * sFactor(), m = {ArrowLeft:[-st, 0], ArrowRight:[st, 0], ArrowUp:[0, -st], ArrowDown:[0, st]}[e.key];
-  if (m){ e.preventDefault(); s.x += m[0]; s.y += m[1]; refresh(); }
+  if (m){ e.preventDefault(); mark("arrow:" + ids.join()); ids.forEach(id => { const s = item(id), pl = planOf(s.plan); s.x = Math.max(0, Math.min(pl.w, s.x + m[0])); s.y = Math.max(0, Math.min(pl.h, s.y + m[1])); }); refresh(); }
 });
-function removeSel(){ const s = item(sel); if (!s) return; P.items = P.items.filter(i => i.id !== s.id); sel = null; refresh(); }
+function removeSel(){ const ids = selIds(); if (!ids.length) return; mark(); P.items = P.items.filter(i => !ids.includes(i.id)); sel = null; multi.clear(); refresh(); }
 document.querySelectorAll(".tool").forEach(b => b.onclick = () => setTool(b.dataset.tool));
+// Duplique les appareils choisis, décalés de 50 cm ; la copie garde le même chemin de câble.
+function duplicate(){
+  const src = selIds().map(item).filter(s => ["ap","cam","rj"].includes(s.type)); if (!src.length) return;
+  mark();
+  const copies = src.map(s => {
+    const pl = planOf(s.plan), off = 0.5 * ppm(pl);
+    const n = {...s, id:uid(), x:Math.min(pl.w, s.x + off), y:Math.min(pl.h, s.y + off), name:nextName({ap:"AP", cam:"C", rj:"P"}[s.type]), path:s.path && s.path.map(q => [...q])};
+    P.items.push(n); return n.id;
+  });
+  multi = new Set(copies.length > 1 ? copies : []); sel = copies[copies.length - 1]; refresh();
+}
+$("undo").onclick = undo; $("redo").onclick = redo;
 
 function scaleForm(){
   $("scaleform") && $("scaleform").remove();
@@ -366,15 +573,17 @@ function scaleForm(){
   d.style.cssText = "position:absolute;left:12px;bottom:12px;background:#fff;border:1px solid var(--line);border-radius:8px;padding:8px 10px;z-index:3";
   d.innerHTML = `<label for="sc-m">Longueur réelle (m)</label><input id="sc-m" type="number" step="0.01" min="0.1" style="width:90px"><button class="b primary" id="sc-ok">Valider</button><button class="b" id="sc-no">Annuler</button>`;
   $("stage").appendChild(d); $("sc-m").focus();
-  $("sc-ok").onclick = () => { const m = parseFloat($("sc-m").value), pl = plan(); if (!(m > 0)) return; const px = Math.hypot(scalePts[1][0] - scalePts[0][0], scalePts[1][1] - scalePts[0][1]); pl.ppm = px / m; setTool("select"); refresh(); sync(); };
+  $("sc-ok").onclick = () => { const m = parseFloat($("sc-m").value), pl = plan(); if (!(m > 0)) return; mark(); const px = Math.hypot(scalePts[1][0] - scalePts[0][0], scalePts[1][1] - scalePts[0][1]); pl.ppm = px / m; setTool("select"); refresh(); sync(); };
   $("sc-no").onclick = () => setTool("select");
 }
 
 /* ---------- panneaux : événements délégués ---------- */
-$("tabs").addEventListener("click", e => { const b = e.target.closest("[data-plan]"); if (!b) return; planId = b.dataset.plan; sel = null; sync(); fit(); save(); });
-$("rows").addEventListener("click", e => { const r = e.target.closest("[data-row]"); if (!r) return; const i = item(r.dataset.row); sel = i.id; if (i.plan !== planId){ planId = i.plan; sync(); fit(); } else { draw(); panels(); } });
+$("tabs").addEventListener("click", e => { const b = e.target.closest("[data-plan]"); if (!b) return; planId = b.dataset.plan; sel = null; multi.clear(); sync(); fit(); save(); });
+$("rows").addEventListener("click", e => { const r = e.target.closest("[data-row]"); if (!r) return; const i = item(r.dataset.row); selectOnly(i.id); if (i.plan !== planId){ planId = i.plan; sync(); fit(); } else { draw(); panels(); } });
+const UNDOABLE = new Set(["pname", "ports", "poe", "tva", "pl-name", "pl-z", "pl-op", "pl-cab", "s-name", "s-angle", "s-fov", "s-r", "s-qty", "s-poe"]);
 document.addEventListener("input", e => {
   const id = e.target.id, pl = plan(), s = item(sel);
+  if (UNDOABLE.has(id) || id.startsWith("pr-")) mark(id + ":" + (id.startsWith("s-") && s ? s.id : id.startsWith("pl-") && pl ? pl.id : ""));
   if (id === "pname"){ P.name = e.target.value; save(); }
   if (id === "ports"){ P.ports = Math.max(8, +e.target.value || 48); panelsNoSel(); save(); }
   if (id === "pl-name"){ pl.name = e.target.value; $("tabs").querySelector(`[data-plan="${pl.id}"]`).textContent = pl.name; save(); }
@@ -385,16 +594,26 @@ document.addEventListener("input", e => {
   if (id === "s-angle" && s){ s.angle = +e.target.value; lite(); }
   if (id === "s-fov" && s){ s.fov = +e.target.value; lite(); }
   if (id === "s-r" && s){ s.r = +e.target.value; lite(); }
+  if (id === "poe"){ P.poe = Math.max(0, +e.target.value || 0); panelsNoSel(); save(); }
+  if (id === "tva"){ P.tva = Math.max(0, Math.min(100, parseFloat(e.target.value) || 0)); panelsNoSel(); save(); }
+  if (id.startsWith("pr-")){ P.prices[id.slice(3)] = Math.max(0, parseFloat(e.target.value) || 0); panelsNoSel(); save(); }
+  if (id === "s-poe" && s){ s.poe = Math.max(0, Math.min(90, parseFloat(e.target.value) || 0)); panelsNoSel(); save(); }
   if (id === "s-qty" && s){ s.qty = Math.max(1, Math.min(6, +e.target.value || 1)); panelsNoSel(); save(); }
 });
 document.addEventListener("click", e => {
   if (e.target.id === "s-del") removeSel();
+  if (e.target.id === "s-dup") duplicate();
+  if (e.target.id === "s-auto"){ mark(); selIds().forEach(id => delete item(id).path); refresh(); }
+  if (e.target.id === "m-qty-ok"){ const v = Math.max(1, Math.min(6, parseInt($("m-qty").value) || 1)); mark(); selIds().map(item).filter(i => i.type === "rj").forEach(i => i.qty = v); refresh(); msg(`${v} prise${v > 1 ? "s" : ""} par point appliqué.`); }
+  if (e.target.id === "m-poe-ok"){ const v = Math.max(0, Math.min(90, parseFloat($("m-poe").value) || 0)); mark(); selIds().map(item).filter(i => i.type === "ap" || i.type === "cam").forEach(i => i.poe = v); refresh(); }
+  if (e.target.id === "pr-def"){ try { localStorage.setItem("atelier-tarifs", JSON.stringify(P.prices)); msg("Tarifs retenus : les nouveaux projets partiront de ces prix."); } catch (err) { msg("Impossible de retenir les tarifs ici."); } }
   if (e.target.id === "pl-del"){
     const b = e.target; if (b.dataset.sure !== "1"){ b.dataset.sure = "1"; b.textContent = "Confirmer la suppression"; return; }
-    const pl = plan(); P.items = P.items.filter(i => i.plan !== pl.id); P.plans = P.plans.filter(p => p.id !== pl.id); planId = P.plans.length ? P.plans[0].id : null; sel = null; sync(); if (planId) fit(); else draw(); save();
+    const pl = plan(); mark(); P.items = P.items.filter(i => i.plan !== pl.id); P.plans = P.plans.filter(p => p.id !== pl.id); planId = P.plans.length ? P.plans[0].id : null; sel = null; multi.clear(); sync(); if (planId) fit(); else draw(); save();
   }
 });
-$("newproj").onclick = e => { const b = e.target; if (P.plans.length && b.dataset.sure !== "1"){ b.dataset.sure = "1"; b.textContent = "Tout effacer ?"; setTimeout(() => { b.dataset.sure = ""; b.textContent = "Nouveau"; }, 3000); return; } P = fresh(); planId = null; sel = null; sync(); draw(); save(); b.textContent = "Nouveau"; b.dataset.sure = ""; };
+function newProject(){ mark(); P = fresh(); planId = null; sel = null; multi.clear(); filePath = ""; dirty = false; sync(); draw(); save(); title(); }
+$("newproj").onclick = e => { const b = e.target; if (P.plans.length && b.dataset.sure !== "1"){ b.dataset.sure = "1"; b.textContent = "Tout effacer ?"; setTimeout(() => { b.dataset.sure = ""; b.textContent = "Nouveau"; }, 3000); return; } newProject(); b.textContent = "Nouveau"; b.dataset.sure = ""; };
 
 /* ---------- import de plans ---------- */
 function msg(t, id){ $(id || "msg").textContent = t; }
@@ -419,6 +638,7 @@ function loadPdfJs(){
 }
 async function addPdfFile(f, note){
   const lib = await loadPdfJs(), buf = await readFile(f, "buf"), doc = await lib.getDocument({data:buf}).promise, out = [];
+  if (doc.numPages > 12) out.skipped = `${f.name} : ${doc.numPages} pages, seules les 12 premières ont été importées.`;
   for (let n = 1; n <= Math.min(doc.numPages, 12); n++){
     note(`Lecture de ${f.name}, page ${n} sur ${doc.numPages}…`);
     const pg = await doc.getPage(n), v1 = pg.getViewport({scale:1}), k = Math.min(3, 3000 / Math.max(v1.width, v1.height)), v = pg.getViewport({scale:k});
@@ -431,25 +651,42 @@ async function addPdfFile(f, note){
 }
 async function importFiles(files){
   const note = t => { msg(t); msg(t, "dropmsg"); };
-  let last = null;
+  let last = null, marked = false; const extra = [];
   for (const f of files){
     try {
       const pages = /pdf$/i.test(f.type) || /\.pdf$/i.test(f.name) ? await addPdfFile(f, note) : await addImageFile(f);
+      if (pages.skipped) extra.push(pages.skipped);
+      if (pages.length && !marked){ mark(); marked = true; }
       pages.forEach(p => { const pl = {id:uid(), name:p.name, img:p.img, w:p.w, h:p.h, ppm:null, z:0, op:.6}; P.plans.push(pl); last = pl.id; });
     } catch (err) { note(`Impossible de lire « ${f.name} » : ${err.message}. Pour un PDF, exporte la page en PNG ou JPG et réessaie.`); return; }
   }
-  if (last){ planId = last; sel = null; sync(); fit(); save(); note("Plan ajouté. Pose l'échelle (outil Échelle) pour avoir des longueurs justes."); }
+  if (last){ planId = last; sel = null; multi.clear(); sync(); fit(); save(); note(["Plan ajouté. Pose l'échelle (outil Échelle) pour avoir des longueurs justes.", ...extra].join(" ")); }
 }
 ["addplan", "addplan2"].forEach(id => $(id).addEventListener("change", e => { importFiles([...e.target.files]); e.target.value = ""; }));
 const stage = $("stage");
 ["dragenter", "dragover"].forEach(ev => stage.addEventListener(ev, e => { e.preventDefault(); $("dz").classList.add("over"); }));
 ["dragleave", "drop"].forEach(ev => stage.addEventListener(ev, e => { e.preventDefault(); $("dz").classList.remove("over"); }));
 stage.addEventListener("drop", e => { const fs = [...e.dataTransfer.files]; if (fs.length) importFiles(fs); });
+function openText(text, path){
+  try {
+    const o = JSON.parse(text); if (!o.plans || !o.items) throw new Error("fichier de projet non reconnu");
+    if (P.plans.length) mark();
+    opened = true; P = norm(o);
+    planId = P.plans[0] ? P.plans[0].id : null; sel = null; multi.clear(); filePath = path || ""; dirty = false;
+    sync(); fit(); save(); title(); msg("Projet ouvert" + (path ? " : " + path : "."));
+  } catch (err) { msg("Ouverture impossible : " + err.message); }
+}
+async function openProject(){
+  if (window.desktop && window.desktop.openProject){
+    try { const r = await window.desktop.openProject(); if (r) openText(r.text, r.path); } catch (e) { msg("Ouverture impossible : " + errText(e)); }
+  } else $("openproj").click();
+}
+$("openlbl").addEventListener("click", e => { if (window.desktop && window.desktop.openProject){ e.preventDefault(); openProject(); } });
 $("openproj").addEventListener("change", async e => {
   const f = e.target.files[0]; e.target.value = ""; if (!f) return;
-  try { const o = JSON.parse(await f.text()); if (!o.plans || !o.items) throw new Error("fichier de projet non reconnu"); P = {name:o.name || "Projet", ports:o.ports || 48, plans:o.plans, items:o.items}; planId = P.plans[0] ? P.plans[0].id : null; sel = null; sync(); fit(); save(); msg("Projet ouvert."); }
-  catch (err) { msg("Ouverture impossible : " + err.message); }
+  openText(await f.text(), "");
 });
+if (window.desktop && window.desktop.onOpenFile) window.desktop.onOpenFile(d => openText(d.text, d.path));
 
 /* ---------- exports ---------- */
 let dl = null; (async () => { try { dl = window.claude ? await window.claude.use("downloads") : null; } catch (e) { dl = null; } })();
@@ -457,27 +694,134 @@ async function saveFile(name, data){
   if (!dl){ try { const a = document.createElement("a"); a.href = URL.createObjectURL(data instanceof Blob ? data : new Blob([data])); a.download = name; document.body.appendChild(a); a.click(); a.remove(); msg("Fichier téléchargé : " + name); } catch (e) { msg("Téléchargement impossible : " + e.message); } return; }
   try { await dl.save({filename:name, data}); msg("Fichier proposé : " + name); } catch (e) { msg(e && e.code === "declined" ? "Enregistrement annulé." : "Export impossible (" + (e && (e.code || e.message)) + ")."); } }
 const slug = s => (s || "projet").normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^a-z0-9]+/gi, "-").replace(/^-|-$/g, "").toLowerCase() || "projet";
-$("x-json").onclick = () => saveFile(slug(P.name) + ".json", JSON.stringify(P));
+async function saveProject(as){
+  const name = slug(P.name) + ".atelier", txt = JSON.stringify(P);
+  if (window.desktop && window.desktop.saveProject){
+    try {
+      const p = await window.desktop.saveProject(as ? null : filePath || null, name, txt);
+      if (!p){ msg("Enregistrement annulé."); return; }
+      filePath = p; dirty = false; save(); msg("Projet enregistré : " + p);
+    } catch (e) { msg("Enregistrement impossible : " + errText(e)); }
+    return;
+  }
+  await saveFile(name, txt); dirty = false; save();
+}
+$("x-json").onclick = () => saveProject(false);
+$("x-saveas").onclick = () => saveProject(true);
 $("x-csv").onclick = () => {
-  const rows = [["Repere", "Type", "Plan", "Quantite", "Longueur reelle (m)", "A prevoir (m)"]];
-  devices().forEach(d => { const l = lens(d); rows.push([d.name, NAMES[d.type], planOf(d.plan).name, d.type === "rj" ? d.qty : 1, l.raw == null ? "" : f1(l.raw), l.order == null ? "" : l.order]); });
+  const rows = [["Repere", "Type", "Plan", "Quantite", "Longueur reelle (m)", "A prevoir (m)", "PoE (W)", "Trace"]];
+  devices().forEach(d => { const l = lens(d); rows.push([d.name, NAMES[d.type], planOf(d.plan).name, d.type === "rj" ? d.qty : 1, l.raw == null ? "" : f1(l.raw), l.order == null ? "" : l.order, d.type === "rj" ? "" : poeOf(d), d.path && d.path.length ? "personnalise" : "automatique"]); });
   saveFile(slug(P.name) + "-liaisons.csv", "﻿" + rows.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(";")).join("\n"));
 };
-$("x-png").onclick = async () => {
-  const pl = plan(); if (!pl) return; const s = Math.max(1, pl.w / 1500);
+// Plan annoté rendu dans un canvas (taille max. `maxDim` px sur le grand côté).
+async function planCanvas(pl, maxDim){
+  const s = Math.max(1, pl.w / 1500), k = Math.min(1, (maxDim || Infinity) / Math.max(pl.w, pl.h));
   const x = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${pl.w} ${pl.h}" width="${pl.w}" height="${pl.h}"><rect width="${pl.w}" height="${pl.h}" fill="#fff"/>${render(pl, s, false)}</svg>`;
-  try { const im = await loadImg("data:image/svg+xml;charset=utf-8," + encodeURIComponent(x)), c = document.createElement("canvas"); c.width = pl.w; c.height = pl.h; c.getContext("2d").drawImage(im, 0, 0); c.toBlob(b => saveFile(slug(P.name) + "-" + slug(pl.name) + ".png", b), "image/png"); }
+  const im = await loadImg("data:image/svg+xml;charset=utf-8," + encodeURIComponent(x)), c = document.createElement("canvas");
+  c.width = Math.round(pl.w * k); c.height = Math.round(pl.h * k); c.getContext("2d").drawImage(im, 0, 0, c.width, c.height);
+  return c;
+}
+$("x-png").onclick = async () => {
+  const pl = plan(); if (!pl) return;
+  try { const c = await planCanvas(pl); c.toBlob(b => saveFile(slug(P.name) + "-" + slug(pl.name) + ".png", b), "image/png"); }
   catch (e) { msg("Rendu de l'image impossible."); }
 };
+
+/* ---------- rapport PDF : synthèse, matériel, liaisons, plans annotés ---------- */
+async function reportHtml(){
+  const B = bilan(), b = BA(), today = new Date().toLocaleDateString("fr-FR", {day:"numeric", month:"long", year:"numeric"});
+  const m = v => v == null ? "–" : f1(v) + " m";
+  const alerts = [...B.w, ...B.ok.filter(x => x.l.raw > 90).map(x => `${esc(x.d.name)} : ${f1(x.l.raw)} m, au-delà des 90 m d'un lien Ethernet.`)];
+  if (B.ports > P.ports) alerts.push(`${B.ports} ports nécessaires pour un switch de ${P.ports} ports.`);
+  const mat = [
+    ["Borne WiFi", B.cnt("ap"), ""], ["Caméra IP", B.cnt("cam"), ""], ["Prise RJ45", B.cnt("rj"), ""],
+    ["Baie de brassage", b ? 1 : 0, b ? "sur « " + esc(planOf(b.plan).name) + " »" : "à placer"],
+    ["Switch", 1, `${P.ports} ports, ${B.ports} utilisés (dont 2 de réserve)`],
+    ["Câble Cat6", B.total + " m", `${B.tourets} touret${B.tourets > 1 ? "s" : ""} de ${TOURET} m`],
+    ["Alimentation PoE", f1(B.poeUsed) + " W", `budget du switch : ${P.poe} W`],
+  ];
+  if (B.fl != null) mat.push(["Fibre opérateur (arrivée → baie)", Math.ceil(B.fl * 1.15 + 2) + " m", `tracé ≈ ${Math.ceil(B.fl)} m`]);
+  const Q = chiffrage(B);
+  const quoteSection = !Q.ht ? "" : `<section class="page"><h2>Estimation</h2><p class="sub">Prix unitaires hors taxes. Estimation indicative, à confirmer par un devis.</p>
+<table style="max-width:200mm"><thead><tr><th>Désignation</th><th class="n">Quantité</th><th>Unité</th><th class="n">Prix unitaire HT</th><th class="n">Total HT</th></tr></thead><tbody>
+${Q.lines.map(l => `<tr><td>${esc(l.lib)}</td><td class="n">${l.q}</td><td>${l.u}</td><td class="n">${eur(l.p)}</td><td class="n">${eur(l.t)}</td></tr>`).join("")}
+<tr><th colspan="4">Total HT</th><th class="n">${eur(Q.ht)}</th></tr><tr><td colspan="4">TVA ${P.tva} %</td><td class="n">${eur(Q.tva)}</td></tr><tr><th colspan="4">Total TTC</th><th class="n">${eur(Q.ttc)}</th></tr></tbody></table></section>`;
+  const plans = [];
+  for (const pl of P.plans){
+    const c = await planCanvas(pl, 2600), its = P.items.filter(i => i.plan === pl.id);
+    plans.push(`<section class="plan"><h2>${esc(pl.name)}</h2>
+      <p class="sub">Niveau ${f1(pl.z || 0)} m · ${pl.ppm ? "échelle " + f1(pl.ppm) + " px/m" : "échelle non définie, longueurs indicatives"} · ${its.length} élément${its.length > 1 ? "s" : ""}</p>
+      <img src="${c.toDataURL("image/jpeg", .88)}" alt="">
+      <p class="legend"><b style="color:#ea580c">━</b> fibre opérateur <b style="color:#1d4ed8">━</b> câble Cat6 <b style="color:#9ca3af">━</b> chemin de câbles <b style="color:#6d28d9">╌</b> 230 V dédié baie <b style="color:#c81e1e">◔</b> champ des caméras</p></section>`);
+  }
+  return `<!DOCTYPE html><html lang="fr"><head><meta charset="utf-8"><title>${esc(P.name)} — rapport</title>
+<link rel="stylesheet" href="fonts/fonts.css"><style>
+@page{size:A4 landscape;margin:12mm}
+*{box-sizing:border-box} body{margin:0;font:10.5pt/1.4 'IBM Plex Sans',system-ui,'Segoe UI',sans-serif;color:#0f172a}
+h1{font-size:20pt;margin:0} h2{font-size:13pt;margin:0 0 2mm} h3{font-size:10pt;text-transform:uppercase;letter-spacing:.5pt;color:#5b6678;margin:6mm 0 2mm}
+.head{display:flex;justify-content:space-between;align-items:flex-end;border-bottom:2px solid #0f172a;padding-bottom:3mm;margin-bottom:2mm}
+.sub{color:#5b6678;margin:0 0 3mm}
+.tiles{display:grid;grid-template-columns:repeat(6,1fr);gap:3mm} .tile{border:1px solid #dde1e8;border-radius:2mm;padding:2.5mm 3mm}
+.tile b{display:block;font-size:15pt} .tile span{font-size:8.5pt;color:#5b6678} .tile.bad{border-color:#b91c1c} .tile.bad b{color:#b91c1c}
+.cols{display:grid;grid-template-columns:1fr 1.35fr;gap:8mm}
+table{border-collapse:collapse;width:100%;font-size:9pt;font-variant-numeric:tabular-nums} th{text-align:left;color:#5b6678;font-weight:600;border-bottom:1px solid #0f172a;padding:1.2mm 2mm}
+td{border-bottom:1px solid #dde1e8;padding:1.2mm 2mm} .n{text-align:right} tr{break-inside:avoid}
+.dot{display:inline-block;width:2.4mm;height:2.4mm;border-radius:50%;margin-right:1.5mm}
+.alert{color:#b45309;background:#fffbeb;border:1px solid #fde68a;border-radius:1.5mm;padding:1.5mm 2.5mm;margin:1.2mm 0;font-size:9pt}
+.plan,.page{break-before:page} .plan img{display:block;width:100%;height:158mm;object-fit:contain;border:1px solid #dde1e8}
+.legend{font-size:8.5pt;color:#5b6678;margin:2mm 0 0} .legend b{margin-left:3mm}
+.note{font-size:8pt;color:#5b6678;margin-top:5mm}
+</style></head><body>
+<div class="head"><div><p class="sub" style="margin:0">Dossier d'implantation réseau</p><h1>${esc(P.name)}</h1></div><div class="sub" style="margin:0">${today}</div></div>
+<div class="tiles">
+  <div class="tile"><b>${B.cnt("ap")}</b><span>bornes WiFi</span></div><div class="tile"><b>${B.cnt("cam")}</b><span>caméras</span></div>
+  <div class="tile"><b>${B.cnt("rj")}</b><span>prises RJ45</span></div><div class="tile"><b>${B.total} m</b><span>câble Cat6 à fournir</span></div>
+  <div class="tile${B.mx && B.mx.l.raw > 90 ? " bad" : ""}"><b>${B.mx ? m(B.mx.l.raw) : "–"}</b><span>liaison la plus longue${B.mx ? " (" + esc(B.mx.d.name) + ")" : ""}</span></div>
+  <div class="tile${B.ports > P.ports ? " bad" : ""}"><b>${B.ports} / ${P.ports}</b><span>ports du switch</span></div>
+</div>
+${alerts.length ? `<h3>Points d'attention</h3>${alerts.map(a => `<div class="alert">${a}</div>`).join("")}` : ""}
+<div class="cols"><div><h3>Matériel</h3><table><thead><tr><th>Désignation</th><th class="n">Quantité</th><th>Précision</th></tr></thead><tbody>
+${mat.map(r => `<tr><td>${r[0]}</td><td class="n">${r[1]}</td><td>${r[2]}</td></tr>`).join("")}</tbody></table></div>
+<div><h3>Liaisons depuis la baie</h3><table><thead><tr><th>Repère</th><th>Type</th><th>Plan</th><th class="n">Qté</th><th class="n">Réel</th><th class="n">À prévoir</th></tr></thead><tbody>
+${B.L.map(x => `<tr><td><span class="dot" style="background:${COL[x.d.type]}"></span>${esc(x.d.name)}</td><td>${NAMES[x.d.type]}</td><td>${esc(planOf(x.d.plan).name)}</td><td class="n">${x.d.type === "rj" ? x.d.qty : 1}</td><td class="n">${x.l.raw == null ? esc(x.l.why) : m(x.l.raw)}</td><td class="n">${x.l.order == null ? "" : x.l.order + " m"}</td></tr>`).join("") || `<tr><td colspan="6">Aucun appareil placé.</td></tr>`}
+</tbody></table></div></div>
+<p class="note">Longueurs : tracé en équerre le long des chemins de câbles, + 1,5 m (2,5 m pour une prise) de raccordement, + passage par la gaine montante et la hauteur d'étage. « À prévoir » ajoute 10 % et 3 m de marge.</p>
+${quoteSection}${plans.join("")}
+</body></html>`;
+}
+async function exportReport(){
+  if (!P.plans.length){ msg("Ajoute un plan avant de faire le rapport."); return; }
+  msg("Préparation du rapport…");
+  let html; try { html = await reportHtml(); } catch (e) { msg("Rapport impossible : " + e.message); return; }
+  const name = slug(P.name) + "-rapport.pdf";
+  if (window.desktop && window.desktop.savePdf){
+    try { const p = await window.desktop.savePdf(name, html); msg(p ? "Rapport enregistré : " + p : "Enregistrement annulé."); }
+    catch (e) { msg("Rapport impossible : " + errText(e)); }
+    return;
+  }
+  // Navigateur : impression (choisir « Enregistrer au format PDF »).
+  const f = document.createElement("iframe"); f.style.cssText = "position:fixed;width:0;height:0;border:0";
+  f.onload = () => setTimeout(() => { f.contentWindow.print(); setTimeout(() => f.remove(), 2000); }, 400);
+  f.srcdoc = html; document.body.appendChild(f); msg("Choisis « Enregistrer au format PDF » dans la fenêtre d'impression.");
+}
+$("x-pdf").onclick = exportReport;
+
+/* ---------- commandes du menu de l'application de bureau ---------- */
+window.atelierCmd = c => ({
+  new: () => { if (!P.plans.length || confirm("Commencer un nouveau projet ?\n(Ctrl+Z permet de revenir en arrière.)")) newProject(); },
+  open: openProject, addplan: () => $("addplan").click(), save: () => saveProject(false), saveas: () => saveProject(true),
+  pdf: exportReport, csv: () => $("x-csv").click(), png: () => $("x-png").click(), dup: duplicate,
+  undo: () => inField() ? document.execCommand("undo") : undo(), redo: () => inField() ? document.execCommand("redo") : redo(),
+}[c] || (() => {}))();
 
 $("x-copy").onclick = async () => {
   const txt = JSON.stringify({name:P.name, ports:P.ports, plans:P.plans.map(({img, ...r}) => r), items:P.items}), ta = $("json"); ta.value = txt;
   try { await navigator.clipboard.writeText(txt); ta.hidden = true; msg("Configuration copiée. Colle-la dans le chat."); }
   catch (e) { ta.hidden = false; ta.focus(); ta.select(); msg("Copie bloquée par le navigateur : sélectionne le texte ci-dessous et copie-le."); }
 };
-$("x-clear").onclick = e => { const b = e.target; if (b.dataset.sure !== "1"){ b.dataset.sure = "1"; b.textContent = "Confirmer ?"; setTimeout(() => { b.dataset.sure = ""; b.textContent = "Retirer tous les éléments"; }, 3000); return; } P.items = []; sel = null; b.dataset.sure = ""; b.textContent = "Retirer tous les éléments"; refresh(); };
+$("x-clear").onclick = e => { const b = e.target; if (b.dataset.sure !== "1"){ b.dataset.sure = "1"; b.textContent = "Confirmer ?"; setTimeout(() => { b.dataset.sure = ""; b.textContent = "Retirer tous les éléments"; }, 3000); return; } mark(); P.items = []; sel = null; multi.clear(); b.dataset.sure = ""; b.textContent = "Retirer tous les éléments"; refresh(); };
 
-sync(); restore();
+sync(); histUi(); restore();
 </script>
 </body>
 </html>
