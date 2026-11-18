@@ -878,8 +878,10 @@ $("x-bom").onclick = () => {
 };
 // Plan annoté rendu dans un canvas (taille max. `maxDim` px sur le grand côté).
 async function planCanvas(pl, maxDim){
-  const s = Math.max(1, pl.w / 1500), k = Math.min(1, (maxDim || Infinity) / Math.max(pl.w, pl.h));
-  const x = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${pl.w} ${pl.h}" width="${pl.w}" height="${pl.h}"><rect width="${pl.w}" height="${pl.h}" fill="#fff"/>${render(pl, s, false)}</svg>`;
+  // Export / rapport : symboles et étiquettes agrandis (le plan est réduit à la taille d'une page, ils doivent rester lisibles)
+  const s = Math.max(1, pl.w / 1500) * 2, k = Math.min(1, (maxDim || Infinity) / Math.max(pl.w, pl.h));
+  const css = `<style>text.t{paint-order:stroke;stroke:#fff;stroke-width:${(3 * 1).toFixed(1)}px;stroke-linejoin:round;font-family:Arial,Helvetica,sans-serif}</style>`;
+  const x = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${pl.w} ${pl.h}" width="${pl.w}" height="${pl.h}">${css}<rect width="${pl.w}" height="${pl.h}" fill="#fff"/>${render(pl, s, false)}</svg>`;
   const im = await loadImg("data:image/svg+xml;charset=utf-8," + encodeURIComponent(x)), c = document.createElement("canvas");
   c.width = Math.round(pl.w * k); c.height = Math.round(pl.h * k); c.getContext("2d").drawImage(im, 0, 0, c.width, c.height);
   return c;
