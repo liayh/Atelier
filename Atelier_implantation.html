@@ -37,6 +37,15 @@ h1{font-size:16px;margin:0;font-weight:700}
 .tool:hover{border-color:var(--ink)} .tool[aria-pressed="true"]{background:var(--ink);color:#fff;border-color:var(--ink)}
 .tool i{width:12px;height:12px;display:inline-block;border-radius:50%}
 .sep{width:1px;height:22px;background:var(--line);margin:0 4px}
+.palette{background:#fafbfc}
+.gtabs{display:flex;gap:2px}
+.gtab{border:1px solid transparent;background:transparent;border-radius:6px;padding:4px 9px;font-size:12.5px;font-weight:600;color:var(--muted);cursor:pointer}
+.gtab:hover{color:var(--ink)} .gtab[aria-selected="true"]{background:#e8eaee;color:var(--ink);border-color:var(--line)}
+#tools{flex:1;min-width:320px}
+.tool svg{flex:none;display:block}
+tr.gh td{background:var(--paper);font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);font-weight:600}
+.mod{font-size:11px;color:var(--muted);line-height:1.25}
+.tag{font-size:10.5px;color:var(--muted);margin-left:5px}
 .stage{position:relative;flex:1;min-height:420px;background:#e9ebef;border-radius:0 0 8px 8px;overflow:hidden}
 svg#plan{position:absolute;inset:0;width:100%;height:100%;touch-action:none;user-select:none;display:block}
 .drop{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:24px}
@@ -94,20 +103,17 @@ text.t{paint-order:stroke;stroke:#fff;stroke-width:3px;stroke-linejoin:round;fon
     <div class="bar" id="bar">
       <button class="tool" data-tool="select" aria-pressed="true" title="Déplacer / sélectionner (Échap)">Sélection</button>
       <span class="sep"></span>
-      <button class="tool" data-tool="ap"><i style="background:var(--wifi)"></i>Borne WiFi</button>
-      <button class="tool" data-tool="cam"><i style="background:var(--cam)"></i>Caméra</button>
-      <button class="tool" data-tool="rj"><i style="background:var(--rj);border-radius:2px"></i>Prise RJ45</button>
-      <span class="sep"></span>
-      <button class="tool" data-tool="ba"><i style="background:#111;border-radius:2px"></i>Baie</button>
-      <button class="tool" data-tool="fib"><i style="background:var(--fibre);border-radius:2px;transform:rotate(45deg)"></i>Arrivée fibre</button>
-      <button class="tool" data-tool="gm"><i style="background:#fff;border:2px solid var(--fibre);border-radius:2px"></i>Gaine montante</button>
-      <span class="sep"></span>
       <button class="tool" data-tool="scale">Échelle</button>
       <label class="tool" style="cursor:pointer"><input type="checkbox" id="snap"> Grille 25 cm</label>
       <span class="sp"></span>
       <button class="b" id="zin" aria-label="Zoom avant">+</button>
       <button class="b" id="zout" aria-label="Zoom arrière">−</button>
       <button class="b" id="zfit">Ajuster</button>
+    </div>
+    <div class="bar palette" id="palette">
+      <div class="gtabs" id="gtabs" role="tablist" aria-label="Catégories d'éléments"></div>
+      <span class="sep"></span>
+      <div class="row" id="tools" style="gap:4px"></div>
     </div>
     <div class="stage" id="stage">
       <svg id="plan" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Plan"></svg>
@@ -121,7 +127,7 @@ text.t{paint-order:stroke;stroke:#fff;stroke-width:3px;stroke-linejoin:round;fon
         </div>
       </div>
     </div>
-    <div class="hint" id="legend" style="display:flex;gap:14px;flex-wrap:wrap"><span><b style="color:#ea580c">━</b> fibre opérateur</span><span><b style="color:#1d4ed8">━</b> câble Cat6</span><span><b style="color:#9ca3af">━</b> chemin de câbles</span><span><b style="color:#6d28d9">╌</b> 230 V dédié baie</span></div>
+    <div class="hint" id="legend" style="display:flex;gap:14px;flex-wrap:wrap"><span><b style="color:#ea580c">━</b> fibre opérateur</span><span><b style="color:#1d4ed8">━</b> câble Cat6</span><span><b style="color:#9ca3af">━</b> chemin de câbles</span><span><b style="color:#6d28d9">╌</b> 230 V dédié baie</span><span><b style="color:#be185d">╌</b> câble d'alarme</span></div>
     <div class="hint" id="hint">Glisser un câble : le faire passer où tu veux (double-clic sur un coude pour l'enlever). Maj+clic ou Maj+glisser : sélection multiple. Molette : zoom. Suppr : retirer. Ctrl+D : dupliquer. Ctrl+Z : annuler.</div>
   </section>
   <aside>
@@ -130,14 +136,17 @@ text.t{paint-order:stroke;stroke:#fff;stroke-width:3px;stroke-linejoin:round;fon
       <div class="field" style="grid-template-columns:1fr 70px"><label for="poe">Budget PoE du switch (W)</label><input id="poe" type="number" min="0" max="3000" step="10" value="370"></div></div>
     <div class="card"><h3>Ce plan</h3><div id="planbox"></div></div>
     <div class="card"><h3>Élément choisi</h3><div id="sel"><span style="color:var(--muted)">Clique un élément sur le plan.</span></div></div>
-    <div class="card"><h3>Liaisons depuis la baie</h3>
+    <div class="card"><h3>Liaisons depuis la baie / la centrale</h3>
       <div class="list"><table><thead><tr><th>Repère</th><th>Plan</th><th>Réel</th><th>À prévoir</th></tr></thead><tbody id="rows"></tbody></table></div>
       <div class="msg" id="fibre"></div></div>
+    <div class="card"><h3>Matériel placé</h3>
+      <div class="list"><table><tbody id="bom"></tbody></table></div></div>
     <div class="card"><details id="quote"><summary><h3>Chiffrage</h3></summary><div id="pricebox"></div><div id="quotetot"></div></details></div>
     <div class="card"><h3>Enregistrer et exporter</h3>
       <div class="row">
         <button class="b primary" id="x-pdf" title="Synthèse, matériel, liaisons et plans annotés">Rapport PDF</button>
         <button class="b" id="x-csv">Liaisons (.csv)</button>
+        <button class="b" id="x-bom">Matériel (.csv)</button>
         <button class="b" id="x-png">Ce plan (.png)</button>
       </div>
       <div class="row" style="margin-top:6px"><button class="b" id="x-saveas" title="Ctrl+Maj+S">Enregistrer sous…</button><button class="b" id="x-copy">Copier la configuration</button><button class="b danger" id="x-clear">Retirer tous les éléments</button></div>
@@ -150,15 +159,94 @@ text.t{paint-order:stroke;stroke:#fff;stroke-width:3px;stroke-linejoin:round;fon
 const $ = id => document.getElementById(id);
 const esc = s => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const f1 = n => Math.round(n * 10) / 10;
-const COL = {ap:"#15803d", cam:"#c81e1e", rj:"#1d4ed8", ba:"#111", fib:"#ea580c", gm:"#ea580c"};
-const NAMES = {ap:"Borne WiFi", cam:"Caméra", rj:"Prise RJ45", ba:"Baie", fib:"Arrivée fibre", gm:"Gaine montante"};
 const uid = () => Math.random().toString(36).slice(2, 9);
 
-let planId = null, sel = null, multi = new Set(), tool = "select", view = null, drag = null, scalePts = [], moved = false;
-const DEF_POE = {ap:15, cam:6.5, rj:0};            // consommation PoE typique (W)
-const poeOf = d => d.poe != null ? d.poe : (DEF_POE[d.type] || 0);
-const PRICE_KEYS = [["ap", "Borne WiFi", "€ / u"], ["cam", "Caméra IP", "€ / u"], ["rj", "Prise RJ45", "€ / prise"], ["ba", "Baie de brassage", "€ / u"],
+/* ---------- catalogue des éléments ----------
+   g     : catégorie de la palette (net, tel, alm, vid)
+   link  : "cat6" = câble réseau vers la baie ; "alarm" = câble d'alarme vers la centrale ; absent = pas de câble tracé
+   pre   : préfixe de numérotation (AP1, TEL2…) ; uniq = un seul dans le projet ; perPlan = un seul par plan
+   drop  : descente de câble comptée en plus du tracé (m) ; qty : nombre max d'unités par repère
+   poe   : consommation PoE par défaut (W), modifiable élément par élément
+   svg   : symbole dessiné autour de (0,0), c = couleur de l'élément */
+const A = "#be185d", T = "#0e7490", G = "#475569", K = "#374151";
+const txt = (s, y, fs) => `<text y="${y}" text-anchor="middle" font-size="${fs}" font-weight="700" fill="#fff" font-family="IBM Plex Sans,sans-serif">${s}</text>`;
+const box = (w, h, c, r) => `<rect x="${-w / 2}" y="${-h / 2}" width="${w}" height="${h}" rx="${r || 2}" fill="${c}" stroke="#fff" stroke-width="1.4"/>`;
+const CAT = {
+  /* Réseau */
+  ap:  {g:"net", label:"Borne WiFi", c:"#15803d", link:"cat6", pre:"AP", drop:1.5, poe:15,
+        svg:c => `<circle r="10" fill="${c}" stroke="#fff" stroke-width="1.6"/><path d="M-6,.5 a8,8 0 0 1 12,0 M-3.6,3 a4.6,4.6 0 0 1 7.2,0" stroke="#fff" stroke-width="1.4" fill="none"/><circle cy="5.6" r="1.3" fill="#fff"/>`},
+  rj:  {g:"net", label:"Prise RJ45", c:"#1d4ed8", link:"cat6", pre:"P", drop:2.5, qty:6,
+        svg:c => `<rect x="-5.5" y="-5.5" width="11" height="11" fill="${c}" stroke="#fff" stroke-width="1.4"/>`},
+  ba:  {g:"net", label:"Baie", short:"Baie", c:"#111", uniq:true,
+        hint:"Clique pour poser la baie (une seule dans le projet).",
+        svg:c => `<rect x="-11" y="-16" width="22" height="32" fill="${c}" stroke="#fff" stroke-width="1.4"/><path d="M-7,-10h14M-7,-5h14M-7,0h14M-7,5h14" stroke="#94a3b8" stroke-width="2"/>`},
+  fib: {g:"net", label:"Arrivée fibre", short:"Fibre", c:"#ea580c", uniq:true,
+        hint:"Clique pour poser l'arrivée de la fibre.",
+        svg:c => `<polygon points="0,-10 10,0 0,10 -10,0" fill="${c}" stroke="#fff" stroke-width="1.6"/>`},
+  gm:  {g:"net", label:"Gaine montante", short:"Gaine", c:"#ea580c", perPlan:true,
+        hint:"Clique pour poser la gaine montante de ce plan (le passage des câbles entre niveaux).",
+        svg:c => `<rect x="-9" y="-9" width="18" height="18" fill="#fff" stroke="${c}" stroke-width="2"/><path d="M-9,-9L9,9M9,-9L-9,9" stroke="${c}"/>`},
+  rt:  {g:"net", label:"Routeur multiWAN", c:G, pre:"RT", model:"Routeur Multiwan (dans la baie)",
+        svg:c => box(22, 12, c) + `<path d="M-6,-6L-8,-11M6,-6L8,-11" stroke="${c}" stroke-width="1.5"/><g fill="#fff"><circle cx="-5" r="1.3"/><circle cx="0" r="1.3"/><circle cx="5" r="1.3"/></g>`},
+  b4g: {g:"net", label:"Box secours 4G", c:G, link:"cat6", pre:"4G", drop:1.5, model:"Box Secours 4G (à placer où le signal est bon)",
+        svg:c => box(18, 14, c, 3) + txt("4G", 3.4, 9)},
+
+  /* Téléphonie (devis DE23026) */
+  tel: {g:"tel", label:"Poste IP filaire", c:T, link:"cat6", pre:"TEL", drop:2.5, poe:4, model:"Yealink T53 + alim 5V/2A si pas de PoE",
+        svg:c => box(20, 13, c) + `<g fill="#fff"><circle cx="-3" cy="-1" r="1"/><circle cx="0" cy="-1" r="1"/><circle cx="3" cy="-1" r="1"/><circle cx="-3" cy="2.2" r="1"/><circle cx="0" cy="2.2" r="1"/><circle cx="3" cy="2.2" r="1"/></g>`},
+  dect:{g:"tel", label:"Base DECT IP", c:T, link:"cat6", pre:"DECT", drop:1.5, poe:3, model:"Yealink W70B (1 combiné W73H inclus)",
+        svg:c => `<polygon points="-10,0 -5,-9 5,-9 10,0 5,9 -5,9" fill="${c}" stroke="#fff" stroke-width="1.5"/><path d="M-5,-1 a6,6 0 0 1 10,0 M-2.8,2 a3.4,3.4 0 0 1 5.6,0" stroke="#fff" stroke-width="1.4" fill="none"/>`},
+  comb:{g:"tel", label:"Combiné sans fil", c:T, pre:"CB", qty:6, model:"Yealink W73H",
+        svg:c => `<rect x="-4.5" y="-9" width="9" height="18" rx="3.5" fill="${c}" stroke="#fff" stroke-width="1.4" transform="rotate(20)"/><circle cx="1.5" cy="-4.5" r="1.4" fill="#fff"/>`},
+  fax: {g:"tel", label:"Adaptateur fax", c:T, link:"cat6", pre:"FAX", drop:1.5, model:"PAP2T (ligne fax IP)",
+        svg:c => box(20, 14, c) + txt("FAX", 2.8, 8)},
+
+  /* Alarme intrusion (Securitas) */
+  cen: {g:"alm", label:"Centrale d'alarme", short:"Centrale", c:A, uniq:true, model:"Centrale SENS", hint:"Clique pour poser la centrale d'alarme (une seule dans le projet). Les éléments d'alarme y sont reliés.",
+        svg:c => box(24, 18, c) + txt("ALM", 3, 8.5)},
+  clav:{g:"alm", label:"Clavier", c:A, link:"alarm", pre:"CLV", drop:2.5, model:"Clavier intérieur",
+        svg:c => box(14, 18, c) + `<g fill="#fff"><circle cx="-2.6" cy="-4.5" r="1.1"/><circle cx="2.6" cy="-4.5" r="1.1"/><circle cx="-2.6" cy="0" r="1.1"/><circle cx="2.6" cy="0" r="1.1"/><circle cx="-2.6" cy="4.5" r="1.1"/><circle cx="2.6" cy="4.5" r="1.1"/></g>`},
+  sir: {g:"alm", label:"Sirène", c:A, link:"alarm", pre:"SIR", drop:1.5, model:"Sirène intérieure + batterie",
+        svg:c => `<circle r="10" fill="${c}" stroke="#fff" stroke-width="1.5"/><path d="M-6,-2.5H-3L2,-6V6L-3,2.5H-6Z" fill="#fff"/><path d="M4.5,-2.5a3.6,3.6 0 0 1 0,5" stroke="#fff" stroke-width="1.3" fill="none"/>`},
+  ir:  {g:"alm", label:"Détecteur IR", c:A, link:"alarm", pre:"IR", drop:1.5, model:"Détecteur infrarouge / volumétrique",
+        svg:c => `<circle r="9" fill="${c}" stroke="#fff" stroke-width="1.5"/>` + txt("IR", 3, 9)},
+  bp:  {g:"alm", label:"Bouton agression", c:A, link:"alarm", pre:"BP", drop:2.5, model:"BPHU",
+        svg:c => `<circle r="9" fill="${c}" stroke="#fff" stroke-width="1.5"/>` + txt("!", 4.2, 13)},
+  itp: {g:"alm", label:"Interphonie (levée de doute)", c:A, link:"alarm", pre:"ITP", drop:2.5, model:"Boîtier d'interphonie, levée de doute audio",
+        svg:c => `<circle r="9.5" fill="${c}" stroke="#fff" stroke-width="1.5"/><rect x="-2" y="-6" width="4" height="8" rx="2" fill="#fff"/><path d="M-5,-1a5,5 0 0 0 10,0M0,4v3" stroke="#fff" stroke-width="1.2" fill="none"/>`},
+  gsm: {g:"alm", label:"Secours GSM", c:A, pre:"GSM", model:"Secours GSM, SIM multi-opérateurs (près de la centrale)",
+        svg:c => box(22, 13, c, 3) + txt("GSM", 3, 8)},
+  lect:{g:"alm", label:"Lecteur accès", c:A, link:"alarm", pre:"LEC", drop:2.5, model:"Contrôle d'accès : lecteur + contrôleur",
+        svg:c => box(13, 19, c) + `<path d="M-3,-3a4,4 0 0 1 6,0M-1.6,0.2a2,2 0 0 1 3.2,0" stroke="#fff" stroke-width="1.3" fill="none"/><circle cy="4.5" r="1.4" fill="#fff"/>`},
+
+  /* Vidéo (Securitas) */
+  cam: {g:"vid", label:"Caméra", c:"#c81e1e", link:"cat6", pre:"C", drop:1.5, poe:6.5, model:"Mini-dôme IP 4MP, 2,7-12 mm, IR 40 m",
+        svg:c => `<circle r="6.5" fill="${c}" stroke="#fff" stroke-width="1.6"/><circle r="2.4" fill="#fff"/>`},
+  cam4:{g:"vid", label:"Caméra 4 vues", c:"#c81e1e", link:"cat6", pre:"C4V", drop:1.5, poe:12, model:"Caméra 4 vues 4MP",
+        svg:c => `<circle r="9.5" fill="${c}" stroke="#fff" stroke-width="1.6"/><g fill="#fff"><circle cx="-3.6" cy="-3.6" r="1.9"/><circle cx="3.6" cy="-3.6" r="1.9"/><circle cx="-3.6" cy="3.6" r="1.9"/><circle cx="3.6" cy="3.6" r="1.9"/></g>`},
+  nvr: {g:"vid", label:"Enregistreur NVR", c:K, pre:"NVR", model:"NVR 32 voies + disque 12 To (dans la baie)",
+        svg:c => box(24, 12, c, 1.5) + `<path d="M-8,-2h11M-8,2h11" stroke="#9ca3af" stroke-width="1.4"/><circle cx="8" r="1.6" fill="#22c55e"/>`},
+  ecr: {g:"vid", label:"Écran de contrôle", c:K, pre:"ECR", model:"Écran LCD 24'' + support + cordon HDMI",
+        svg:c => box(22, 14, c, 1.5) + `<path d="M-5,9h10M0,6v3" stroke="${c}" stroke-width="2"/>`},
+  swp: {g:"vid", label:"Switch PoE", c:K, pre:"SW", model:"Switch 16 ports PoE (dans la baie)",
+        svg:c => box(26, 9, c, 1.5) + `<g fill="#fff"><rect x="-10" y="-1.5" width="3" height="3"/><rect x="-5" y="-1.5" width="3" height="3"/><rect x="0" y="-1.5" width="3" height="3"/><rect x="5" y="-1.5" width="3" height="3"/></g>`}
+};
+const GROUPS = [["net", "Réseau"], ["tel", "Téléphonie"], ["alm", "Alarme"], ["vid", "Vidéo"]];
+const COL = Object.fromEntries(Object.entries(CAT).map(([k, v]) => [k, v.c]));
+const NAMES = Object.fromEntries(Object.entries(CAT).map(([k, v]) => [k, v.label]));
+const HUB = {cat6:"ba", alarm:"cen"};                       // vers quoi chaque type de câble est tiré
+const linkOf = i => CAT[i.type] && CAT[i.type].link;
+const qtyOf = i => CAT[i.type].qty ? (i.qty || 1) : 1;
+const isDev = i => !!linkOf(i);                              // relié par un câble tracé
+const isNum = i => !!CAT[i.type].pre;                        // élément numéroté (dupliquable, repère modifiable)
+
+let planId = null, sel = null, multi = new Set(), tool = "select", grp = "net", view = null, drag = null, scalePts = [], moved = false;
+const poeOf = d => d.poe != null ? d.poe : (CAT[d.type].poe || 0);   // consommation PoE (W)
+const hasPoe = i => CAT[i.type].poe != null;
+const CORE_PRICES = [["ap", "Borne WiFi", "€ / u"], ["cam", "Caméra IP", "€ / u"], ["rj", "Prise RJ45", "€ / prise"], ["ba", "Baie de brassage", "€ / u"],
   ["sw", "Switch", "€ / u"], ["cable", "Câble Cat6", "€ / m"], ["fibre", "Fibre", "€ / m"], ["pose", "Pose et raccordement", "€ / point"]];
+const EXTRA = Object.keys(CAT).filter(k => !["ap", "cam", "rj", "ba", "fib", "gm"].includes(k));   // éléments chiffrés en plus, s'ils sont placés
+const PRICE_KEYS = [...CORE_PRICES, ["cablealarm", "Câble d'alarme", "€ / m"], ...EXTRA.map(k => [k, CAT[k].label, "€ / u"])];
 function defaultPrices(){ let d = {}; try { d = JSON.parse(localStorage.getItem("atelier-tarifs") || "{}"); } catch (e) {} return Object.fromEntries(PRICE_KEYS.map(([k]) => [k, +d[k] || 0])); }
 function fresh(){ return {name:"Mon projet", ports:48, poe:370, tva:20, prices:defaultPrices(), plans:[], items:[]}; }
 // Complète un projet ancien ou importé avec les champs ajoutés depuis.
@@ -176,8 +264,10 @@ function toggleSel(id){
 const plan = () => P.plans.find(p => p.id === planId);
 const item = id => P.items.find(i => i.id === id);
 const ppm = p => p.ppm || p.w / 30;
-const devices = () => P.items.filter(i => ["ap","cam","rj"].includes(i.type));
+const devices = () => P.items.filter(isDev);
 const BA = () => P.items.find(i => i.type === "ba");
+const hubOf = link => P.items.find(i => i.type === HUB[link]);
+const hubName = link => link === "alarm" ? "centrale" : "baie";
 const FIB = () => P.items.find(i => i.type === "fib");
 const GM = pid => P.items.find(i => i.type === "gm" && i.plan === pid);
 const planOf = id => P.plans.find(p => p.id === id);
@@ -218,8 +308,8 @@ async function restore(){ try { const d = await idb(); const r = d.transaction("
 /* ---------- câblage ---------- */
 const man = pts => pts.slice(1).reduce((s, p, i) => s + Math.abs(p[0] - pts[i][0]) + Math.abs(p[1] - pts[i][1]), 0);
 const plen = pts => pts.slice(1).reduce((s, p, i) => s + Math.hypot(p[0] - pts[i][0], p[1] - pts[i][1]), 0);
-// Départ du câble sur le plan de l'appareil : la baie si elle y est, sinon la gaine montante.
-function routeStart(d){ const b = BA(); if (b && b.plan === d.plan) return [b.x, b.y]; const g = GM(d.plan); return g ? [g.x, g.y] : null; }
+// Départ du câble sur le plan de l'appareil : la baie (Cat6) ou la centrale (alarme) si elle y est, sinon la gaine montante.
+function routeStart(d){ const b = hubOf(linkOf(d)); if (b && b.plan === d.plan) return [b.x, b.y]; const g = GM(d.plan); return g ? [g.x, g.y] : null; }
 // Tracé sur le plan de l'appareil : coudes choisis par l'utilisateur (d.path), sinon équerre automatique.
 function routeOn(d){
   if (!planOf(d.plan)) return null; const s0 = routeStart(d); if (!s0) return null;
@@ -241,12 +331,12 @@ function alignPt(d, k, w, pl){
   return [Math.max(0, Math.min(pl.w, x)), Math.max(0, Math.min(pl.h, y))];
 }
 function lens(d){
-  const b = BA(), pl = planOf(d.plan), pts = routeOn(d), a = d.type === "rj" ? 2.5 : 1.5;
-  if (!b || !pts) return {raw:null, order:null, why: !b ? "baie manquante" : "gaine manquante"};
+  const lk = linkOf(d), b = hubOf(lk), pl = planOf(d.plan), pts = routeOn(d), a = CAT[d.type].drop || 1.5;
+  if (!b || !pts) return {raw:null, order:null, why: !b ? hubName(lk) + " manquante" : "gaine manquante"};
   let m = plen(pts) / ppm(pl) + a;
   if (b.plan !== d.plan){
     const pb = planOf(b.plan), gb = GM(b.plan);
-    if (!gb) return {raw:null, order:null, why:"gaine manquante (plan de la baie)"};
+    if (!gb) return {raw:null, order:null, why:"gaine manquante (plan de la " + hubName(lk) + ")"};
     m += man([[b.x, b.y], [gb.x, b.y], [gb.x, gb.y]]) / ppm(pb) + Math.abs((pl.z || 0) - (pb.z || 0)) + 2;
   }
   return {raw:m, order:Math.ceil(m * 1.1 + 3)};
@@ -264,28 +354,22 @@ const svg = $("plan");
 function sFactor(){ const r = svg.getBoundingClientRect(); return 1 / Math.min(r.width / view.w, r.height / view.h); }
 function symbol(i, on){
   const h = on ? `<circle r="17" fill="none" stroke="#0f172a" stroke-width="1.5" stroke-dasharray="4 3"/>` : "";
-  const hit = `<circle r="15" fill="transparent"/>`;
-  if (i.type === "ap") return h + hit + `<circle r="10" fill="${COL.ap}" stroke="#fff" stroke-width="1.6"/><path d="M-6,.5 a8,8 0 0 1 12,0 M-3.6,3 a4.6,4.6 0 0 1 7.2,0" stroke="#fff" stroke-width="1.4" fill="none"/><circle cy="5.6" r="1.3" fill="#fff"/>`;
-  if (i.type === "cam") return h + hit + `<circle r="6.5" fill="${COL.cam}" stroke="#fff" stroke-width="1.6"/><circle r="2.4" fill="#fff"/>`;
-  if (i.type === "rj") return h + hit + `<rect x="-5.5" y="-5.5" width="11" height="11" fill="${COL.rj}" stroke="#fff" stroke-width="1.4"/>`;
-  if (i.type === "ba") return h + hit + `<rect x="-11" y="-16" width="22" height="32" fill="#111" stroke="#fff" stroke-width="1.4"/><path d="M-7,-10h14M-7,-5h14M-7,0h14M-7,5h14" stroke="#94a3b8" stroke-width="2"/>`;
-  if (i.type === "fib") return h + hit + `<polygon points="0,-10 10,0 0,10 -10,0" fill="${COL.fib}" stroke="#fff" stroke-width="1.6"/>`;
-  return h + hit + `<rect x="-9" y="-9" width="18" height="18" fill="#fff" stroke="${COL.gm}" stroke-width="2"/><path d="M-9,-9L9,9M9,-9L-9,9" stroke="${COL.gm}"/>`;
+  const hit = `<circle r="15" fill="transparent"/>`, c = CAT[i.type];
+  return h + hit + c.svg(c.c);
 }
 function label(i, pl){
-  const q = i.type === "rj" && i.qty > 1 ? " ×" + i.qty : "";
-  const t = {ap:i.name, cam:i.name, rj:i.name + q, ba:"Baie", fib:"Fibre", gm:"Gaine"}[i.type];
-  return `<text class="t" x="12" y="-9" font-size="11" font-weight="700" fill="${COL[i.type]}">${esc(t)}</text>`;
+  const c = CAT[i.type], q = c.qty && i.qty > 1 ? " ×" + i.qty : "";
+  return `<text class="t" x="12" y="-9" font-size="11" font-weight="700" fill="${c.c}">${esc(c.short || i.name + q)}</text>`;
 }
 function render(pl, s, interactive){
   const out = [`<image href="${pl.img}" x="0" y="0" width="${pl.w}" height="${pl.h}" opacity="${pl.op == null ? .6 : pl.op}"/>`];
   const devs = devices().filter(d => d.plan === pl.id), b = BA(), f = FIB(), g = GM(pl.id);
   const poly = (pts, st) => `<polyline points="${pts.map(p => p.join(",")).join(" ")}" fill="none" ${st} stroke-linejoin="round" pointer-events="none" vector-effect="non-scaling-stroke"/>`;
   if (pl.cables !== false){
-    devs.forEach(d => { const r = routeOn(d); if (r) out.push(poly(r, `stroke="#9ca3af" stroke-width="${6}" opacity=".35"`)); });
-    devs.forEach(d => { const r = routeOn(d); if (r) out.push(poly(r, `stroke="#1d4ed8" stroke-width="1.2" opacity=".8"`)); });
+    devs.forEach(d => { const r = linkOf(d) === "cat6" && routeOn(d); if (r) out.push(poly(r, `stroke="#9ca3af" stroke-width="${6}" opacity=".35"`)); });
+    devs.forEach(d => { const r = routeOn(d); if (r) out.push(poly(r, linkOf(d) === "alarm" ? `stroke="#be185d" stroke-width="1.4" stroke-dasharray="4 3" opacity=".85"` : `stroke="#1d4ed8" stroke-width="1.2" opacity=".8"`)); });
     if (interactive){
-      devs.forEach(d => { const r = routeOn(d); if (r && isSel(d.id)) out.push(poly(r, `stroke="#1d4ed8" stroke-width="3.2"`)); });
+      devs.forEach(d => { const r = routeOn(d); if (r && isSel(d.id)) out.push(poly(r, `stroke="${linkOf(d) === "alarm" ? "#be185d" : "#1d4ed8"}" stroke-width="3.2"`)); });
       // zones de prise des câbles (invisibles, plus larges que le trait)
       if (tool === "select") devs.forEach(d => { const r = routeOn(d); if (r) out.push(`<polyline data-cable="${d.id}" points="${r.map(p => p.join(",")).join(" ")}" fill="none" stroke="transparent" stroke-width="${12 * s}" pointer-events="stroke" style="cursor:move"/>`); });
     }
@@ -295,6 +379,8 @@ function render(pl, s, interactive){
       out.push(poly([[b.x, b.y], [g.x, b.y], [g.x, g.y]], `stroke="#ea580c" stroke-width="2" stroke-dasharray="6 3"`));
       out.push(poly([[b.x, b.y + 9 * s], [g.x + 9 * s, b.y + 9 * s], [g.x + 9 * s, g.y]], `stroke="#6d28d9" stroke-width="1.8" stroke-dasharray="5 3"`));
     }
+    const cn = hubOf("alarm");
+    if (cn && cn.plan === pl.id && g && P.plans.length > 1) out.push(poly([[cn.x, cn.y], [g.x - 5 * s, cn.y], [g.x - 5 * s, g.y]], `stroke="#be185d" stroke-width="1.8" stroke-dasharray="3 3"`));
   }
   devs.filter(d => d.type === "cam").forEach(d => {
     const r = d.r * ppm(pl), a1 = (d.angle - d.fov / 2) * Math.PI / 180, a2 = (d.angle + d.fov / 2) * Math.PI / 180;
@@ -311,7 +397,7 @@ function render(pl, s, interactive){
     out.push(`<circle data-handle="${c.id}" cx="${hx}" cy="${hy}" r="${7 * s}" fill="#fff" stroke="#0f172a" stroke-width="${1.8 * s}" style="cursor:crosshair"/>`);
   }
   // poignées du câble de l'appareil choisi : coudes (blancs) et milieux de segment (bleus) pour en ajouter
-  if (interactive && c && !multi.size && ["ap","cam","rj"].includes(c.type) && c.plan === pl.id && pl.cables !== false && tool === "select"){
+  if (interactive && c && !multi.size && isDev(c) && c.plan === pl.id && pl.cables !== false && tool === "select"){
     const r = routeOn(c);
     if (r){
       for (let k = 0; k < r.length - 1; k++){
@@ -348,31 +434,52 @@ function sync(){
 function panels(){ stats(); planPanel(); selPanel(); }
 const TOURET = 305;   // longueur d'une bobine de câble Cat6
 function bilan(){
-  const ds = devices(), cnt = t => ds.filter(d => d.type === t).reduce((s, d) => s + (t === "rj" ? d.qty : 1), 0);
+  const ds = devices(), cnt = t => P.items.filter(i => i.type === t).reduce((s, i) => s + qtyOf(i), 0);
   const L = ds.map(d => ({d, l: lens(d)})), ok = L.filter(x => x.l.raw != null);
-  const total = ok.reduce((s, x) => s + x.l.order * (x.d.type === "rj" ? x.d.qty : 1), 0);
-  const mx = ok.reduce((m, x) => (!m || x.l.raw > m.l.raw) ? x : m, null);
-  const ports = cnt("ap") + cnt("cam") + cnt("rj") + 2;
+  const net = ok.filter(x => linkOf(x.d) === "cat6"), alm = ok.filter(x => linkOf(x.d) === "alarm");
+  const sum = a => a.reduce((s, x) => s + x.l.order * qtyOf(x.d), 0);
+  const total = sum(net), totalAlm = sum(alm);
+  const mx = net.reduce((m, x) => (!m || x.l.raw > m.l.raw) ? x : m, null);
+  const ports = ds.filter(d => linkOf(d) === "cat6").reduce((s, d) => s + qtyOf(d), 0) + 2;
+  const hasNet = ds.some(d => linkOf(d) === "cat6"), hasAlm = ds.some(d => linkOf(d) === "alarm");
   const poeUsed = ds.reduce((s, d) => s + poeOf(d), 0);
   const w = [];
   if (poeUsed > P.poe) w.push(`Budget PoE dépassé : ${f1(poeUsed)} W demandés pour ${P.poe} W disponibles sur le switch.`);
-  if (!BA() && ds.length) w.push("Place la baie pour calculer les câbles.");
+  if (!BA() && hasNet) w.push("Place la baie pour calculer les câbles.");
+  if (!hubOf("alarm") && hasAlm) w.push("Place la centrale d'alarme pour calculer les câbles d'alarme.");
   P.plans.forEach(p => { if (!p.ppm) w.push(`« ${esc(p.name)} » : échelle non définie, longueurs indicatives.`); });
-  const miss = ok.length < L.length ? L.filter(x => x.l.raw == null && BA()).map(x => x.d.plan) : [];
+  const miss = ok.length < L.length ? L.filter(x => x.l.raw == null && hubOf(linkOf(x.d))).map(x => x.d.plan) : [];
   [...new Set(miss)].forEach(pid => w.push(`Place une gaine montante sur « ${esc(planOf(pid).name)} ».`));
   if (BA() && P.plans.length > 1 && !GM(BA().plan)) w.push("Place une gaine montante sur le plan de la baie.");
+  const cn = hubOf("alarm");
+  if (cn && hasAlm && P.plans.length > 1 && !GM(cn.plan) && !(BA() && BA().plan === cn.plan)) w.push("Place une gaine montante sur le plan de la centrale.");
   L.sort((a, b) => (b.l.raw || -1) - (a.l.raw || -1));
-  return {cnt, L, ok, total, mx, ports, poeUsed, w, tourets: Math.ceil(total / TOURET), fl: fibreLen()};
+  return {cnt, L, ok, total, totalAlm, hasAlm, mx, ports, poeUsed, w, tourets: Math.ceil(total / TOURET), fl: fibreLen()};
 }
+let priceSig = "";
 function stats(){
-  const B = bilan(), {cnt, L, total, mx, ports, w, tourets, fl} = B, Q = chiffrage(B);
+  const B = bilan(), {cnt, L, total, mx, ports, w, tourets, fl} = B;
+  const sig = priceKeys().join();                         // les champs de prix suivent les éléments placés
+  if (sig !== priceSig){ priceSig = sig; pricePanel(); }
+  const Q = chiffrage(B);
   const t = (v, s, bad) => `<div class="tile${bad ? " bad" : ""}"><b>${v}</b><span>${s}</span></div>`;
-  $("tiles").innerHTML = t(cnt("ap"), "bornes WiFi") + t(cnt("cam"), "caméras") + t(cnt("rj"), "prises RJ45") + t(total + " m", "câble à fournir") + t(mx ? f1(mx.l.raw) + " m" : "–", "liaison max." + (mx ? " (" + mx.d.name + ")" : ""), mx && mx.l.raw > 90) + t(ports + " / " + P.ports, "ports utilisés", ports > P.ports) + t(f1(B.poeUsed) + " / " + P.poe + " W", "PoE utilisé", B.poeUsed > P.poe) + t(tourets, "touret" + (tourets > 1 ? "s" : "") + " de " + TOURET + " m") + t(Q.ht ? eur(Q.ht) : "–", Q.ht ? "estimation HT" : "chiffrage : saisis les prix");
+  $("tiles").innerHTML = t(cnt("ap"), "bornes WiFi") + t(cnt("cam") + cnt("cam4"), "caméras") + t(cnt("rj"), "prises RJ45") + t(total + " m", "câble à fournir") + t(mx ? f1(mx.l.raw) + " m" : "–", "liaison max." + (mx ? " (" + mx.d.name + ")" : ""), mx && mx.l.raw > 90) + t(ports + " / " + P.ports, "ports utilisés", ports > P.ports) + t(f1(B.poeUsed) + " / " + P.poe + " W", "PoE utilisé", B.poeUsed > P.poe) + t(tourets, "touret" + (tourets > 1 ? "s" : "") + " de " + TOURET + " m") + (B.hasAlm ? t(B.totalAlm + " m", "câble d'alarme à fournir") : "") + t(Q.ht ? eur(Q.ht) : "–", Q.ht ? "estimation HT" : "chiffrage : saisis les prix");
   quoteTotals(Q);
   $("warns").innerHTML = w.map(x => `<div class="warn">${x}</div>`).join("");
-  $("rows").innerHTML = L.map(x => `<tr class="item${isSel(x.d.id) ? " sel" : ""}" data-row="${x.d.id}"><td><span class="dot" style="background:${COL[x.d.type]}"></span>${esc(x.d.name)}${x.d.type === "rj" && x.d.qty > 1 ? " ×" + x.d.qty : ""}</td><td>${esc(planOf(x.d.plan).name)}</td><td>${x.l.raw == null ? `<span style="color:var(--muted)">${x.l.why}</span>` : f1(x.l.raw) + " m" + (x.l.raw > 90 ? ' <span class="pill">&gt; 90 m</span>' : "")}</td><td>${x.l.order == null ? "" : x.l.order + " m"}</td></tr>`).join("") || `<tr><td colspan="4" style="color:var(--muted)">Aucun appareil placé.</td></tr>`;
+  $("rows").innerHTML = L.map(x => { const c6 = linkOf(x.d) === "cat6"; return `<tr class="item${isSel(x.d.id) ? " sel" : ""}" data-row="${x.d.id}"><td><span class="dot" style="background:${COL[x.d.type]}"></span>${esc(x.d.name)}${CAT[x.d.type].qty && x.d.qty > 1 ? " ×" + x.d.qty : ""}${c6 ? "" : '<span class="tag">alarme</span>'}</td><td>${esc(planOf(x.d.plan).name)}</td><td>${x.l.raw == null ? `<span style="color:var(--muted)">${x.l.why}</span>` : f1(x.l.raw) + " m" + (c6 && x.l.raw > 90 ? ' <span class="pill">&gt; 90 m</span>' : "")}</td><td>${x.l.order == null ? "" : x.l.order + " m"}</td></tr>`; }).join("") || `<tr><td colspan="4" style="color:var(--muted)">Aucun appareil placé.</td></tr>`;
   $("fibre").innerHTML = [total ? `Câble Cat6 : ${total} m, soit ${tourets} touret${tourets > 1 ? "s" : ""} de ${TOURET} m.` : "",
+    B.hasAlm ? `Câble d'alarme : ${B.totalAlm} m.` : "",
     fl == null ? "" : `Fibre : arrivée → baie ≈ ${Math.ceil(fl)} m (à prévoir ${Math.ceil(fl * 1.15 + 2)} m).`].filter(Boolean).join("<br>");
+  bomPanel();
+}
+function bom(){        // nomenclature : une ligne par type d'élément, avec la répartition par plan
+  const m = {};
+  P.items.forEach(i => { const p = planOf(i.plan); if (!CAT[i.type] || !p) return; const e = m[i.type] || (m[i.type] = {type:i.type, n:0, plans:{}}); e.n += qtyOf(i); e.plans[p.name] = (e.plans[p.name] || 0) + qtyOf(i); });
+  return Object.keys(CAT).filter(k => m[k]).map(k => m[k]);
+}
+function bomPanel(){
+  const rows = bom();
+  $("bom").innerHTML = GROUPS.map(([g, l]) => { const r = rows.filter(e => CAT[e.type].g === g); return r.length ? `<tr class="gh"><td colspan="2">${l}</td></tr>` + r.map(e => { const c = CAT[e.type]; return `<tr><td><span class="dot" style="background:${c.c}"></span>${esc(c.label)}${c.model ? `<div class="mod">${esc(c.model)}</div>` : ""}</td><td style="text-align:right;vertical-align:top"><b>${e.n}</b></td></tr>`; }).join("") : ""; }).join("") || `<tr><td colspan="2" style="color:var(--muted)">Aucun élément placé.</td></tr>`;
 }
 function planPanel(){
   const pl = plan();
@@ -389,27 +496,31 @@ function selPanel(){
   if (!s){ box.innerHTML = `<span style="color:var(--muted)">Clique un élément sur le plan.</span>`; return; }
   const pl = planOf(s.plan);
   let h = `<div class="kv"><span>${NAMES[s.type]}</span><span>${esc(s.name || "")}</span></div><div class="kv"><span>Position</span><span>${f1((s.x) / ppm(pl))} m ; ${f1((s.y) / ppm(pl))} m</span></div>`;
-  if (["ap","cam","rj"].includes(s.type)){ const l = lens(s); h += `<div class="field" style="grid-template-columns:70px 1fr"><label for="s-name">Repère</label><input type="text" id="s-name" value="${esc(s.name)}"></div>`; if (l.raw != null) h += `<div class="kv"><span>Câble réel / à prévoir</span><span>${f1(l.raw)} m / ${l.order} m</span></div>`; }
+  const c = CAT[s.type];
+  if (c.model) h += `<div class="kv"><span>Modèle</span><span style="font-family:var(--sans);text-align:right">${esc(c.model)}</span></div>`;
+  if (isNum(s)) h += `<div class="field" style="grid-template-columns:70px 1fr"><label for="s-name">Repère</label><input type="text" id="s-name" value="${esc(s.name)}"></div>`;
+  if (isDev(s)){ const l = lens(s); if (l.raw != null) h += `<div class="kv"><span>Câble ${linkOf(s) === "alarm" ? "d'alarme " : ""}réel / à prévoir</span><span>${f1(l.raw)} m / ${l.order} m</span></div>`; }
   if (s.type === "cam"){
     const fld = (id, lab, mn, mx, v, u) => `<div class="field"><label for="${id}">${lab}</label><input type="range" id="${id}" min="${mn}" max="${mx}" value="${Math.round(v)}"><output id="${id}-o">${Math.round(v)}${u}</output></div>`;
     h += fld("s-angle", "Direction", 0, 359, ((s.angle % 360) + 360) % 360, "°") + fld("s-fov", "Ouverture", 30, 120, s.fov, "°") + fld("s-r", "Portée", 2, 30, s.r, " m");
   }
-  if (s.type === "rj") h += `<div class="field" style="grid-template-columns:1fr 64px"><label for="s-qty">Nombre de prises</label><input type="number" id="s-qty" min="1" max="6" value="${s.qty}"></div>`;
-  if (s.type === "ap" || s.type === "cam") h += `<div class="field" style="grid-template-columns:1fr 64px"><label for="s-poe">Consommation PoE (W)</label><input type="number" id="s-poe" min="0" max="90" step="0.5" value="${poeOf(s)}"></div>`;
-  if (["ap","cam","rj"].includes(s.type) && routeOn(s)) h += `<div class="kv"><span>Tracé du câble</span><span>${s.path && s.path.length ? s.path.length + " coude" + (s.path.length > 1 ? "s" : "") + " posé" + (s.path.length > 1 ? "s" : "") : "automatique"}</span></div>`;
-  h += `<div class="row" style="margin-top:8px">${["ap","cam","rj"].includes(s.type) ? `<button class="b" id="s-dup" title="Ctrl+D">Dupliquer</button>` : ""}${s.path && s.path.length ? `<button class="b" id="s-auto">Tracé automatique</button>` : ""}<button class="b danger" id="s-del">Retirer</button></div>`;
+  if (c.qty) h += `<div class="field" style="grid-template-columns:1fr 64px"><label for="s-qty">${s.type === "rj" ? "Nombre de prises" : "Nombre d'unités"}</label><input type="number" id="s-qty" min="1" max="${c.qty}" value="${s.qty || 1}"></div>`;
+  if (hasPoe(s)) h += `<div class="field" style="grid-template-columns:1fr 64px"><label for="s-poe">Consommation PoE (W)</label><input type="number" id="s-poe" min="0" max="90" step="0.5" value="${poeOf(s)}"></div>`;
+  if (isDev(s) && routeOn(s)) h += `<div class="kv"><span>Tracé du câble</span><span>${s.path && s.path.length ? s.path.length + " coude" + (s.path.length > 1 ? "s" : "") + " posé" + (s.path.length > 1 ? "s" : "") : "automatique"}</span></div>`;
+  h += `<div class="row" style="margin-top:8px">${isNum(s) ? `<button class="b" id="s-dup" title="Ctrl+D">Dupliquer</button>` : ""}${s.path && s.path.length ? `<button class="b" id="s-auto">Tracé automatique</button>` : ""}<button class="b danger" id="s-del">Retirer</button></div>`;
   box.innerHTML = h;
 }
 function multiPanel(box){
-  const its = selIds().map(item), cnt = t => its.filter(i => i.type === t).length, devs = its.filter(i => ["ap","cam","rj"].includes(i.type));
+  const its = selIds().map(item), devs = its.filter(isDev), nums = its.filter(isNum);
   const same = (arr, f) => arr.length && arr.every(i => f(i) === f(arr[0])) ? f(arr[0]) : "";
-  const rjs = its.filter(i => i.type === "rj"), pw = its.filter(i => i.type === "ap" || i.type === "cam");
+  const rjs = its.filter(i => i.type === "rj"), pw = its.filter(hasPoe);
   const ls = devs.map(lens).filter(l => l.raw != null);
-  let h = `<div class="kv"><span>${its.length} éléments choisis</span><span>${[["ap", "AP"], ["cam", "cam."], ["rj", "prise"]].filter(([t]) => cnt(t)).map(([t, n]) => cnt(t) + " " + n).join(" · ")}</span></div>`;
+  const byType = Object.entries(its.reduce((m, i) => (m[i.type] = (m[i.type] || 0) + 1, m), {})).map(([t, n]) => n + " " + CAT[t].label.toLowerCase());
+  let h = `<div class="kv"><span>${its.length} éléments choisis</span><span style="font-family:var(--sans);text-align:right">${byType.slice(0, 4).join(" · ")}${byType.length > 4 ? " …" : ""}</span></div>`;
   if (ls.length) h += `<div class="kv"><span>Câble à prévoir</span><span>${ls.reduce((a, l) => a + l.order, 0)} m</span></div>`;
   if (rjs.length) h += `<div class="field" style="grid-template-columns:1fr 60px auto"><label for="m-qty">Prises par point</label><input type="number" id="m-qty" min="1" max="6" value="${same(rjs, i => i.qty)}"><button class="b" id="m-qty-ok">Appliquer</button></div>`;
   if (pw.length) h += `<div class="field" style="grid-template-columns:1fr 60px auto"><label for="m-poe">PoE par appareil (W)</label><input type="number" id="m-poe" min="0" max="90" step="0.5" value="${same(pw, poeOf)}"><button class="b" id="m-poe-ok">Appliquer</button></div>`;
-  h += `<div class="row" style="margin-top:8px">${devs.length ? `<button class="b" id="s-dup" title="Ctrl+D">Dupliquer</button>` : ""}${devs.some(i => i.path && i.path.length) ? `<button class="b" id="s-auto">Tracés automatiques</button>` : ""}<button class="b danger" id="s-del">Retirer la sélection</button></div>`;
+  h += `<div class="row" style="margin-top:8px">${nums.length ? `<button class="b" id="s-dup" title="Ctrl+D">Dupliquer</button>` : ""}${devs.some(i => i.path && i.path.length) ? `<button class="b" id="s-auto">Tracés automatiques</button>` : ""}<button class="b danger" id="s-del">Retirer la sélection</button></div>`;
   box.innerHTML = h;
 }
 /* ---------- chiffrage ---------- */
@@ -418,17 +529,26 @@ function chiffrage(B){
   const pr = P.prices || {}, b = BA(), fib = B.fl == null ? 0 : Math.ceil(B.fl * 1.15 + 2);
   const lines = [
     ["Borne WiFi", B.cnt("ap"), "u", pr.ap], ["Caméra IP", B.cnt("cam"), "u", pr.cam], ["Prise RJ45", B.cnt("rj"), "u", pr.rj],
-    ["Baie de brassage", b ? 1 : 0, "u", pr.ba], [`Switch ${P.ports} ports`, devices().length ? 1 : 0, "u", pr.sw],
+    ["Baie de brassage", b ? 1 : 0, "u", pr.ba], [`Switch ${P.ports} ports`, devices().some(d => linkOf(d) === "cat6") ? 1 : 0, "u", pr.sw],
     ["Câble Cat6", B.total, "m", pr.cable], ["Fibre opérateur", fib, "m", pr.fibre],
-    ["Pose et raccordement", B.cnt("ap") + B.cnt("cam") + B.cnt("rj"), "pt", pr.pose],
+    ["Pose et raccordement", devices().reduce((s, d) => s + qtyOf(d), 0), "pt", pr.pose],
   ].map(([lib, q, u, p]) => ({lib, q, u, p:+p || 0, t:q * (+p || 0)})).filter(l => l.q);
+  // éléments du catalogue (téléphonie, alarme, vidéo…) : une ligne seulement si un prix est saisi
+  if (B.hasAlm && +pr.cablealarm) lines.push({lib:"Câble d'alarme", q:B.totalAlm, u:"m", p:+pr.cablealarm || 0, t:B.totalAlm * (+pr.cablealarm || 0), opt:true});
+  EXTRA.forEach(k => { const q = B.cnt(k); if (q && +pr[k]) lines.push({lib:CAT[k].label, q, u:"u", p:+pr[k], t:q * +pr[k], opt:true}); });
   const ht = lines.reduce((a, l) => a + l.t, 0), tva = ht * (+P.tva || 0) / 100;
   return {lines, ht, tva, ttc:ht + tva};
 }
-// Champs des prix : rendus seulement au chargement du projet (pour ne pas perdre le curseur pendant la saisie).
+// Prix à saisir : les tarifs de base, plus ceux des éléments du catalogue qui sont placés dans le projet.
+function priceKeys(){
+  const used = new Set(P.items.map(i => i.type)), alm = devices().some(d => linkOf(d) === "alarm");
+  return PRICE_KEYS.filter(([k]) => CORE_PRICES.some(c => c[0] === k) || (k === "cablealarm" ? alm : used.has(k))).map(([k]) => k);
+}
+// Champs des prix : rendus au chargement du projet ou quand un nouveau type d'élément est placé (pas pendant la saisie).
 function pricePanel(){
-  const pr = P.prices || {};
-  $("pricebox").innerHTML = `<div class="prices">${PRICE_KEYS.map(([k, lab, u]) => `<label for="pr-${k}">${lab} <span style="color:var(--muted);font-size:11.5px">${u}</span></label><input type="number" id="pr-${k}" min="0" step="0.01" value="${pr[k] || ""}" placeholder="0">`).join("")}
+  const pr = P.prices || {}; priceSig = priceKeys().join();
+  const keys = new Set(priceKeys());
+  $("pricebox").innerHTML = `<div class="prices">${PRICE_KEYS.filter(([k]) => keys.has(k)).map(([k, lab, u]) => `<label for="pr-${k}">${lab} <span style="color:var(--muted);font-size:11.5px">${u}</span></label><input type="number" id="pr-${k}" min="0" step="0.01" value="${pr[k] || ""}" placeholder="0">`).join("")}
     <label for="tva">TVA (%)</label><input type="number" id="tva" min="0" max="100" step="0.1" value="${P.tva}"></div>
     <div class="row" style="margin-top:8px"><button class="b" id="pr-def" title="Les nouveaux projets partiront de ces prix">Retenir comme tarifs par défaut</button></div>`;
 }
@@ -446,23 +566,28 @@ function toWorld(e){ const p = svg.createSVGPoint(); p.x = e.clientX; p.y = e.cl
 function setTool(t){
   tool = t; scalePts = [];
   document.querySelectorAll(".tool").forEach(b => b.setAttribute("aria-pressed", b.dataset.tool === t));
-  const hints = {select:"Glisser un câble : le faire passer où tu veux (double-clic sur un coude pour l'enlever). Maj+clic ou Maj+glisser : sélection multiple. Molette : zoom. Suppr : retirer. Ctrl+D : dupliquer. Ctrl+Z : annuler.", scale:"Clique les deux extrémités d'une cote connue du plan (une porte, une longueur cotée), puis saisis sa longueur réelle.", ap:"Clique sur le plan pour poser une borne WiFi. Échap pour terminer.", cam:"Clique sur le plan pour poser une caméra. Échap pour terminer.", rj:"Clique sur le plan pour poser une prise. Échap pour terminer.", ba:"Clique pour poser la baie (une seule dans le projet).", fib:"Clique pour poser l'arrivée de la fibre.", gm:"Clique pour poser la gaine montante de ce plan (le passage des câbles entre niveaux)."};
-  $("hint").textContent = hints[t]; $("scaleform") && $("scaleform").remove(); draw();
+  const hints = {select:"Glisser un câble : le faire passer où tu veux (double-clic sur un coude pour l'enlever). Maj+clic ou Maj+glisser : sélection multiple. Molette : zoom. Suppr : retirer. Ctrl+D : dupliquer. Ctrl+Z : annuler.", scale:"Clique les deux extrémités d'une cote connue du plan (une porte, une longueur cotée), puis saisis sa longueur réelle."};
+  const c = CAT[t];
+  $("hint").textContent = hints[t] || (c && (c.hint || `Clique sur le plan pour poser : ${c.label}. Échap pour terminer.`)) || ""; $("scaleform") && $("scaleform").remove(); draw();
+}
+function palette(){     // palette d'éléments : onglets de catégories + éléments de la catégorie active
+  $("gtabs").innerHTML = GROUPS.map(([g, l]) => `<button class="gtab" role="tab" data-grp="${g}" aria-selected="${g === grp}">${l}</button>`).join("");
+  $("tools").innerHTML = Object.entries(CAT).filter(([, v]) => v.g === grp).map(([k, v]) => `<button class="tool" data-tool="${k}" aria-pressed="${tool === k}"${v.model ? ` title="${esc(v.model)}"` : ""}><svg width="22" height="22" viewBox="-17 -17 34 34" aria-hidden="true">${v.svg(v.c)}</svg>${esc(v.label)}</button>`).join("");
 }
 function nextName(prefix){ let n = 1; while (P.items.some(i => i.name === prefix + n)) n++; return prefix + n; }
 function snapPt(x, y, pl){ if (!$("snap") || !$("snap").checked) return [x, y]; const g = 0.25 * ppm(pl); return [Math.round(x / g) * g, Math.round(y / g) * g]; }
 function place(t, x, y){
-  const pl = plan(); let it; [x, y] = snapPt(x, y, pl);
-  if (["ba","fib","gm"].includes(t)){
-    it = P.items.find(i => i.type === t && (t !== "gm" || i.plan === pl.id));
-    if (it){ it.plan = pl.id; it.x = x; it.y = y; } else { it = {id:uid(), type:t, plan:pl.id, x, y, name:NAMES[t]}; P.items.push(it); }
+  const pl = plan(), c = CAT[t], single = c.uniq || c.perPlan; let it; [x, y] = snapPt(x, y, pl);
+  if (single){        // un seul exemplaire (baie, fibre, centrale) ou un par plan (gaine) : on le déplace s'il existe
+    it = P.items.find(i => i.type === t && (!c.perPlan || i.plan === pl.id));
+    if (it){ it.plan = pl.id; it.x = x; it.y = y; } else { it = {id:uid(), type:t, plan:pl.id, x, y, name:c.label}; P.items.push(it); }
   } else {
-    it = {id:uid(), type:t, plan:pl.id, x, y, name: nextName({ap:"AP", cam:"C", rj:"P"}[t])};
+    it = {id:uid(), type:t, plan:pl.id, x, y, name: nextName(c.pre)};
     if (t === "cam") Object.assign(it, {angle:90, fov:70, r:4});
-    if (t === "rj") it.qty = 1;
+    if (c.qty) it.qty = 1;
     P.items.push(it);
   }
-  sel = it.id; if (["ba","fib","gm"].includes(t)) setTool("select");
+  sel = it.id; if (single) setTool("select");
   return it;
 }
 svg.addEventListener("pointerdown", e => {
@@ -542,7 +667,7 @@ document.addEventListener("keydown", e => {
       if (k === "z" && !e.shiftKey){ e.preventDefault(); undo(); return; }
       if (k === "y" || (k === "z" && e.shiftKey)){ e.preventDefault(); redo(); return; }
       if (k === "d"){ e.preventDefault(); duplicate(); return; }
-      if (k === "a"){ e.preventDefault(); const ids = P.items.filter(i => i.plan === planId && ["ap","cam","rj"].includes(i.type)).map(i => i.id); multi = new Set(ids.length > 1 ? ids : []); sel = ids[0] || null; refresh(); return; }
+      if (k === "a"){ e.preventDefault(); const ids = P.items.filter(i => i.plan === planId && isNum(i)).map(i => i.id); multi = new Set(ids.length > 1 ? ids : []); sel = ids[0] || null; refresh(); return; }
     }
   }
   if (/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName)) return;
@@ -553,14 +678,18 @@ document.addEventListener("keydown", e => {
   if (m){ e.preventDefault(); mark("arrow:" + ids.join()); ids.forEach(id => { const s = item(id), pl = planOf(s.plan); s.x = Math.max(0, Math.min(pl.w, s.x + m[0])); s.y = Math.max(0, Math.min(pl.h, s.y + m[1])); }); refresh(); }
 });
 function removeSel(){ const ids = selIds(); if (!ids.length) return; mark(); P.items = P.items.filter(i => !ids.includes(i.id)); sel = null; multi.clear(); refresh(); }
-document.querySelectorAll(".tool").forEach(b => b.onclick = () => setTool(b.dataset.tool));
-// Duplique les appareils choisis, décalés de 50 cm ; la copie garde le même chemin de câble.
+document.addEventListener("click", e => {
+  const b = e.target.closest(".tool[data-tool]"), g = e.target.closest("[data-grp]");
+  if (b) setTool(b.dataset.tool);
+  if (g){ grp = g.dataset.grp; palette(); }
+});
+// Duplique les éléments choisis, décalés de 50 cm ; la copie garde le même chemin de câble.
 function duplicate(){
-  const src = selIds().map(item).filter(s => ["ap","cam","rj"].includes(s.type)); if (!src.length) return;
+  const src = selIds().map(item).filter(isNum); if (!src.length) return;
   mark();
   const copies = src.map(s => {
     const pl = planOf(s.plan), off = 0.5 * ppm(pl);
-    const n = {...s, id:uid(), x:Math.min(pl.w, s.x + off), y:Math.min(pl.h, s.y + off), name:nextName({ap:"AP", cam:"C", rj:"P"}[s.type]), path:s.path && s.path.map(q => [...q])};
+    const n = {...s, id:uid(), x:Math.min(pl.w, s.x + off), y:Math.min(pl.h, s.y + off), name:nextName(CAT[s.type].pre), path:s.path && s.path.map(q => [...q])};
     P.items.push(n); return n.id;
   });
   multi = new Set(copies.length > 1 ? copies : []); sel = copies[copies.length - 1]; refresh();
@@ -598,14 +727,14 @@ document.addEventListener("input", e => {
   if (id === "tva"){ P.tva = Math.max(0, Math.min(100, parseFloat(e.target.value) || 0)); panelsNoSel(); save(); }
   if (id.startsWith("pr-")){ P.prices[id.slice(3)] = Math.max(0, parseFloat(e.target.value) || 0); panelsNoSel(); save(); }
   if (id === "s-poe" && s){ s.poe = Math.max(0, Math.min(90, parseFloat(e.target.value) || 0)); panelsNoSel(); save(); }
-  if (id === "s-qty" && s){ s.qty = Math.max(1, Math.min(6, +e.target.value || 1)); panelsNoSel(); save(); }
+  if (id === "s-qty" && s){ s.qty = Math.max(1, Math.min(CAT[s.type].qty || 1, +e.target.value || 1)); panelsNoSel(); save(); }
 });
 document.addEventListener("click", e => {
   if (e.target.id === "s-del") removeSel();
   if (e.target.id === "s-dup") duplicate();
   if (e.target.id === "s-auto"){ mark(); selIds().forEach(id => delete item(id).path); refresh(); }
   if (e.target.id === "m-qty-ok"){ const v = Math.max(1, Math.min(6, parseInt($("m-qty").value) || 1)); mark(); selIds().map(item).filter(i => i.type === "rj").forEach(i => i.qty = v); refresh(); msg(`${v} prise${v > 1 ? "s" : ""} par point appliqué.`); }
-  if (e.target.id === "m-poe-ok"){ const v = Math.max(0, Math.min(90, parseFloat($("m-poe").value) || 0)); mark(); selIds().map(item).filter(i => i.type === "ap" || i.type === "cam").forEach(i => i.poe = v); refresh(); }
+  if (e.target.id === "m-poe-ok"){ const v = Math.max(0, Math.min(90, parseFloat($("m-poe").value) || 0)); mark(); selIds().map(item).filter(hasPoe).forEach(i => i.poe = v); refresh(); }
   if (e.target.id === "pr-def"){ try { localStorage.setItem("atelier-tarifs", JSON.stringify(P.prices)); msg("Tarifs retenus : les nouveaux projets partiront de ces prix."); } catch (err) { msg("Impossible de retenir les tarifs ici."); } }
   if (e.target.id === "pl-del"){
     const b = e.target; if (b.dataset.sure !== "1"){ b.dataset.sure = "1"; b.textContent = "Confirmer la suppression"; return; }
@@ -709,9 +838,14 @@ async function saveProject(as){
 $("x-json").onclick = () => saveProject(false);
 $("x-saveas").onclick = () => saveProject(true);
 $("x-csv").onclick = () => {
-  const rows = [["Repere", "Type", "Plan", "Quantite", "Longueur reelle (m)", "A prevoir (m)", "PoE (W)", "Trace"]];
-  devices().forEach(d => { const l = lens(d); rows.push([d.name, NAMES[d.type], planOf(d.plan).name, d.type === "rj" ? d.qty : 1, l.raw == null ? "" : f1(l.raw), l.order == null ? "" : l.order, d.type === "rj" ? "" : poeOf(d), d.path && d.path.length ? "personnalise" : "automatique"]); });
+  const rows = [["Repere", "Type", "Cable", "Plan", "Quantite", "Longueur reelle (m)", "A prevoir (m)", "PoE (W)", "Trace"]];
+  devices().forEach(d => { const l = lens(d); rows.push([d.name, NAMES[d.type], linkOf(d) === "alarm" ? "Alarme" : "Cat6", planOf(d.plan).name, qtyOf(d), l.raw == null ? "" : f1(l.raw), l.order == null ? "" : l.order, hasPoe(d) ? poeOf(d) : "", d.path && d.path.length ? "personnalise" : "automatique"]); });
   saveFile(slug(P.name) + "-liaisons.csv", "﻿" + rows.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(";")).join("\n"));
+};
+$("x-bom").onclick = () => {
+  const cat = Object.fromEntries(GROUPS), rows = [["Categorie", "Designation", "Modele", "Quantite", "Repartition par plan"]];
+  bom().forEach(e => { const c = CAT[e.type]; rows.push([cat[c.g], c.label, c.model || "", e.n, Object.entries(e.plans).map(([p, n]) => `${p} : ${n}`).join(" | ")]); });
+  saveFile(slug(P.name) + "-materiel.csv", "﻿" + rows.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(";")).join("\n"));
 };
 // Plan annoté rendu dans un canvas (taille max. `maxDim` px sur le grand côté).
 async function planCanvas(pl, maxDim){
@@ -741,6 +875,9 @@ async function reportHtml(){
     ["Alimentation PoE", f1(B.poeUsed) + " W", `budget du switch : ${P.poe} W`],
   ];
   if (B.fl != null) mat.push(["Fibre opérateur (arrivée → baie)", Math.ceil(B.fl * 1.15 + 2) + " m", `tracé ≈ ${Math.ceil(B.fl)} m`]);
+  if (B.hasAlm) mat.push(["Câble d'alarme", B.totalAlm + " m", "de la centrale vers les éléments d'alarme"]);
+  // éléments du catalogue placés (téléphonie, alarme, vidéo, internet) hors lignes déjà présentes ci-dessus
+  bom().filter(e => !["ap", "cam", "rj", "ba", "fib", "gm"].includes(e.type)).forEach(e => mat.push([esc(CAT[e.type].label), e.n, esc(CAT[e.type].model || "")]));
   const Q = chiffrage(B);
   const quoteSection = !Q.ht ? "" : `<section class="page"><h2>Estimation</h2><p class="sub">Prix unitaires hors taxes. Estimation indicative, à confirmer par un devis.</p>
 <table style="max-width:200mm"><thead><tr><th>Désignation</th><th class="n">Quantité</th><th>Unité</th><th class="n">Prix unitaire HT</th><th class="n">Total HT</th></tr></thead><tbody>
@@ -752,7 +889,7 @@ ${Q.lines.map(l => `<tr><td>${esc(l.lib)}</td><td class="n">${l.q}</td><td>${l.u
     plans.push(`<section class="plan"><h2>${esc(pl.name)}</h2>
       <p class="sub">Niveau ${f1(pl.z || 0)} m · ${pl.ppm ? "échelle " + f1(pl.ppm) + " px/m" : "échelle non définie, longueurs indicatives"} · ${its.length} élément${its.length > 1 ? "s" : ""}</p>
       <img src="${c.toDataURL("image/jpeg", .88)}" alt="">
-      <p class="legend"><b style="color:#ea580c">━</b> fibre opérateur <b style="color:#1d4ed8">━</b> câble Cat6 <b style="color:#9ca3af">━</b> chemin de câbles <b style="color:#6d28d9">╌</b> 230 V dédié baie <b style="color:#c81e1e">◔</b> champ des caméras</p></section>`);
+      <p class="legend"><b style="color:#ea580c">━</b> fibre opérateur <b style="color:#1d4ed8">━</b> câble Cat6 <b style="color:#9ca3af">━</b> chemin de câbles <b style="color:#6d28d9">╌</b> 230 V dédié baie <b style="color:#be185d">╌</b> câble d'alarme <b style="color:#c81e1e">◔</b> champ des caméras</p></section>`);
   }
   return `<!DOCTYPE html><html lang="fr"><head><meta charset="utf-8"><title>${esc(P.name)} — rapport</title>
 <link rel="stylesheet" href="fonts/fonts.css"><style>
@@ -782,8 +919,8 @@ td{border-bottom:1px solid #dde1e8;padding:1.2mm 2mm} .n{text-align:right} tr{br
 ${alerts.length ? `<h3>Points d'attention</h3>${alerts.map(a => `<div class="alert">${a}</div>`).join("")}` : ""}
 <div class="cols"><div><h3>Matériel</h3><table><thead><tr><th>Désignation</th><th class="n">Quantité</th><th>Précision</th></tr></thead><tbody>
 ${mat.map(r => `<tr><td>${r[0]}</td><td class="n">${r[1]}</td><td>${r[2]}</td></tr>`).join("")}</tbody></table></div>
-<div><h3>Liaisons depuis la baie</h3><table><thead><tr><th>Repère</th><th>Type</th><th>Plan</th><th class="n">Qté</th><th class="n">Réel</th><th class="n">À prévoir</th></tr></thead><tbody>
-${B.L.map(x => `<tr><td><span class="dot" style="background:${COL[x.d.type]}"></span>${esc(x.d.name)}</td><td>${NAMES[x.d.type]}</td><td>${esc(planOf(x.d.plan).name)}</td><td class="n">${x.d.type === "rj" ? x.d.qty : 1}</td><td class="n">${x.l.raw == null ? esc(x.l.why) : m(x.l.raw)}</td><td class="n">${x.l.order == null ? "" : x.l.order + " m"}</td></tr>`).join("") || `<tr><td colspan="6">Aucun appareil placé.</td></tr>`}
+<div><h3>Liaisons depuis la baie${B.hasAlm ? " et la centrale" : ""}</h3><table><thead><tr><th>Repère</th><th>Type</th><th>Plan</th><th class="n">Qté</th><th class="n">Réel</th><th class="n">À prévoir</th></tr></thead><tbody>
+${B.L.map(x => `<tr><td><span class="dot" style="background:${COL[x.d.type]}"></span>${esc(x.d.name)}</td><td>${NAMES[x.d.type]}${linkOf(x.d) === "alarm" ? " (alarme)" : ""}</td><td>${esc(planOf(x.d.plan).name)}</td><td class="n">${qtyOf(x.d)}</td><td class="n">${x.l.raw == null ? esc(x.l.why) : m(x.l.raw)}</td><td class="n">${x.l.order == null ? "" : x.l.order + " m"}</td></tr>`).join("") || `<tr><td colspan="6">Aucun appareil placé.</td></tr>`}
 </tbody></table></div></div>
 <p class="note">Longueurs : tracé en équerre le long des chemins de câbles, + 1,5 m (2,5 m pour une prise) de raccordement, + passage par la gaine montante et la hauteur d'étage. « À prévoir » ajoute 10 % et 3 m de marge.</p>
 ${quoteSection}${plans.join("")}
@@ -821,7 +958,7 @@ $("x-copy").onclick = async () => {
 };
 $("x-clear").onclick = e => { const b = e.target; if (b.dataset.sure !== "1"){ b.dataset.sure = "1"; b.textContent = "Confirmer ?"; setTimeout(() => { b.dataset.sure = ""; b.textContent = "Retirer tous les éléments"; }, 3000); return; } mark(); P.items = []; sel = null; multi.clear(); b.dataset.sure = ""; b.textContent = "Retirer tous les éléments"; refresh(); };
 
-sync(); histUi(); restore();
+palette(); sync(); histUi(); restore();
 </script>
 </body>
 </html>
