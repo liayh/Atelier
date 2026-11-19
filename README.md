@@ -118,12 +118,17 @@ Un fichier `.atelier` peut venir de n'importe où ; il est traité comme non fia
 - **Chargement sûr** (`norm()` dans `Atelier_implantation.html`) : seuls les champs connus sont gardés, avec
   le bon type ; nombres bornés, identifiants `[A-Za-z0-9_-]`, modèles pris dans les catalogues, image du plan
   limitée à une vraie image encodée. S'applique aux fichiers ouverts, au double-clic et à la sauvegarde automatique.
-- **CSP** (ajoutée par `scripts/sync-web.js`) : seul le script du logiciel (empreinte SHA-256) s'exécute ;
-  ni code injecté, ni `eval`, ni connexion vers l'extérieur. Page du rapport PDF : aucun script, aucune ressource externe.
+- **CSP** : seul le script du logiciel (empreinte SHA-256) s'exécute ; ni code injecté, ni `eval`.
+  - Version de bureau (posée par `scripts/sync-web.js`) : aucune connexion vers l'extérieur.
+  - Version navigateur (dans `Atelier_implantation.html`) : seuls jsDelivr (pdf.js) et Google Fonts sont autorisés.
+    **L'empreinte change à chaque modification du script : lancer `npm run csp`** (ou `npm run sync`, qui le fait aussi),
+    sinon la version navigateur ne démarre plus. `node scripts/csp.js --check` vérifie sans modifier.
+  - Page du rapport PDF : aucun script, aucune ressource externe.
 - **Processus principal** (`src/main.js`) : demandes acceptées uniquement de la page du logiciel ; écriture
   directe seulement dans un fichier choisi ou ouvert par l'utilisateur (liste tenue côté système).
 - **Electron** : isolation, bac à sable, pas de Node dans la page, navigation et fenêtres bloquées,
   permissions limitées ; exécutable verrouillé (« fuses » : pas de RunAsNode, pas de NODE_OPTIONS ni
   d'inspecteur, intégrité de l'archive vérifiée au démarrage).
 - **Exports CSV** : formules neutralisées (cellules commençant par = + - @).
-- **pdf.js 3.11.174** : faille CVE-2024-4367 neutralisée (`isEvalSupported:false` + CSP sans eval).
+- **pdf.js 6.5.438** (modules ES) : n'utilise plus eval (faille CVE-2024-4367 de la 3.x éliminée). Même version
+  côté navigateur (`PDFJS` dans le HTML, jsDelivr) et bureau (copie locale `vendor/pdfjs/`, vérifiée par `sync-web.js`).

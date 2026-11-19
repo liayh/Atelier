@@ -1,7 +1,7 @@
 {
   "name": "atelier-implantation",
   "productName": "Atelier d'implantation",
-  "version": "1.5.1",
+  "version": "1.5.2",
   "description": "Implantation réseau sur plans : bornes WiFi, caméras, prises RJ45, baie, fibre et longueurs de câble.",
   "author": "devben",
   "license": "UNLICENSED",
@@ -12,7 +12,8 @@
     "icon": "electron scripts/make-icon.js",
     "start": "npm run sync && electron .",
     "dist:win": "npm run sync && bash scripts/build-win.sh",
-    "dist:linux": "npm run sync && electron-builder --linux AppImage deb --x64"
+    "dist:linux": "npm run sync && electron-builder --linux AppImage deb --x64",
+    "csp": "node scripts/csp.js"
   },
   "build": {
     "appId": "fr.devben.atelierimplantation",
@@ -92,7 +93,7 @@
     "@fontsource/ibm-plex-sans": "^5.3.0",
     "electron": "^45.4.1",
     "electron-builder": "^26.18.0",
-    "pdfjs-dist": "^3.11.174"
+    "pdfjs-dist": "^6.5.438"
   },
   "homepage": "https://github.com/liayh/Atelier"
 }
