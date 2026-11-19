@@ -87,7 +87,7 @@ La consommation PoE vient du modèle ; la liste du matériel et le rapport PDF (
 reprennent les références. Les anciennes caméras restent en mode « générique » (réglage manuel).
 
 Données reprises des fiches techniques Dahua ; à compléter ou corriger dans `CAMS` (une ligne par modèle).
-La référence IPC-HDW1330T1-S4 remplace provisoirement la « HDW1330E », introuvable sous ce nom.
+« Dahua HDW1330E » : pas de fiche publique sous ce nom ; valeurs de la gamme HDW1330 (fiche officielle IPC-HDW1330T1-S4), à confirmer.
 
 ## Bornes WiFi et DECT : modèles et couverture
 

@@ -279,8 +279,9 @@ const CAMS = [
   {id:"gen", ref:"Caméra générique", desc:"angle et portée réglés à la main", generic:true},
   {id:"HDBW1431R-ZS", ref:"Dahua IPC-HDBW1431R-ZS-S4", desc:"Mini-dôme 4MP, 2,8-12 mm motorisé, IR 40 m", ir:40, poe:6.4, vari:true,
    lens:[[2.8, 98, 55, [66, 26.4, 13.2, 6.6]], [12, 31, 18, [200, 80, 40, 20]]]},
-  {id:"HDW1330T1-S4", ref:"Dahua IPC-HDW1330T1-S4", desc:"Tourelle 3MP, 2,8 mm, IR 30 m (proche de la HDW1330E, à confirmer)", ir:30,
-   lens:[[2.8, 105, 57, [37.3, 14.9, 7.5, 3.7]]]},
+  // HDW1330E : pas de fiche publique sous ce nom ; caractéristiques de la gamme HDW1330 (fiche officielle IPC-HDW1330T1-S4, 2022).
+  {id:"HDW1330T1-S4", ref:"Dahua HDW1330E", desc:"Tourelle 3MP, 2,8 mm, IR 30 m (données gamme HDW1330, à confirmer)", ir:30, poe:4.8,
+   lens:[[2.8, 105, 57, [44.8, 17.9, 9.0, 4.5]]]},
   {id:"HDW2441T-S", ref:"Dahua IPC-HDW2441T-S", desc:"Tourelle WizSense 4MP, IR 30 m", ir:30,
    lens:[[2.8, 95, 52, [63.6, 25.4, 12.7, 6.4]], [3.6, 78, 41, [85.4, 34.2, 17.1, 8.5]]]},
   {id:"HFW2841S-S", ref:"Dahua IPC-HFW2841S-S", desc:"Tube WizSense 8MP, IR 30 m", ir:30, poe:5.4,
