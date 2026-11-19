@@ -1,0 +1,58 @@
+#!/usr/bin/env bash
+# Prépare Azure Artifact Signing pour BLL. À coller dans un terminal Azure déjà connecté
+# (vscode.dev/azure ou Cloud Shell, en Bash). Ne contient aucun secret.
+# Crée : groupe de ressources, compte de signature (West Europe, Basic), compte robot de compilation
+# et ses droits. La validation de l'identité de BLL reste à faire dans le portail (impossible en ligne
+# de commande, d'après Microsoft). Facturation Artifact Signing : dès la création du compte.
+set -euo pipefail
+RG=atelier-signature
+LOC=westeurope
+SUB=$(az account show --query id -o tsv)
+TENANT=$(az account show --query tenantId -o tsv)
+ACC="bllatelier$(echo "$SUB" | tr -dc 'a-z0-9' | cut -c1-6)"   # nom unique au monde, 3 à 24 caractères
+
+echo "1/6 Inscription du service de signature (Microsoft.CodeSigning)…"
+az provider register --namespace Microsoft.CodeSigning --wait
+
+echo "2/6 Groupe de ressources $RG ($LOC)…"
+az group create -n "$RG" -l "$LOC" -o none
+
+echo "3/6 Compte de signature $ACC (offre Basic)…"
+az artifact-signing show -n "$ACC" -g "$RG" -o none 2>/dev/null \
+  || az artifact-signing create -n "$ACC" -g "$RG" -l "$LOC" --sku Basic -o none
+SCOPE=$(az artifact-signing show -n "$ACC" -g "$RG" --query id -o tsv)
+
+role() {  # role <id objet> <type> <nom actuel> <ancien nom>
+  az role assignment create --assignee-object-id "$1" --assignee-principal-type "$2" --role "$3" --scope "$SCOPE" -o none 2>/dev/null \
+    || az role assignment create --assignee-object-id "$1" --assignee-principal-type "$2" --role "$4" --scope "$SCOPE" -o none
+}
+
+echo "4/6 Droit de faire valider l'identité de BLL (pour toi)…"
+ME=$(az ad signed-in-user show --query id -o tsv)
+role "$ME" User "Artifact Signing Identity Verifier" "Trusted Signing Identity Verifier" \
+  || echo "    (à donner dans le portail : compte de signature > Contrôle d'accès (IAM))"
+
+echo "5/6 Compte robot « atelier-signature » pour la compilation…"
+APP=$(az ad app list --display-name atelier-signature --query "[0].appId" -o tsv)
+[ -n "$APP" ] || APP=$(az ad app create --display-name atelier-signature --query appId -o tsv)
+az ad sp show --id "$APP" -o none 2>/dev/null || az ad sp create --id "$APP" -o none
+SP=$(az ad sp show --id "$APP" --query id -o tsv)
+SECRET=$(az ad app credential reset --id "$APP" --display-name compilation --years 2 --append --query password -o tsv)
+
+echo "6/6 Droit de signer pour le compte robot…"
+sleep 20   # le temps que le compte robot soit visible partout
+role "$SP" ServicePrincipal "Artifact Signing Certificate Profile Signer" "Trusted Signing Certificate Profile Signer"
+
+cat <<EOF
+
+================ À REPORTER DANS « npm run sign:setup » ================
+ID de l'annuaire (tenant)       : $TENANT
+ID d'application (client)       : $APP
+Nom du compte de signature      : $ACC
+Nom du profil de certificat     : atelier   (à créer après la validation de BLL)
+Point d'accès de la région      : weu.codesigning.azure.net
+Secret client (à garder privé)  : $SECRET
+=========================================================================
+Le secret ne sera plus jamais affiché : copie-le maintenant, ne l'envoie à personne.
+Étape suivante, dans le portail : compte $ACC > Identity validations > Organization > New identity > Public.
+EOF
