@@ -294,8 +294,14 @@ const CAMS = [
    n selon le local, marge client 5 dB). DECT : portées intérieures des fiches Yealink. */
 const APS = [
   {id:"gen", ref:"Borne Wi-Fi 6 (générique)", desc:"bi-bande 2,4 / 5 GHz", bands:[2.4, 5], poe:15},
+  /* TP-Link Omada Wi-Fi 6 (consommations PoE, versions européennes, fiches Omada) */
+  {id:"EAP610", ref:"TP-Link Omada EAP610", desc:"Wi-Fi 6 AX1800, plafond", bands:[2.4, 5], poe:12.8, poeStd:"PoE+ 802.3at"},
+  {id:"EAP620HD", ref:"TP-Link Omada EAP620 HD", desc:"Wi-Fi 6 AX1800 haute densité, plafond", bands:[2.4, 5], poe:12.5, poeStd:"PoE+ 802.3at"},
+  {id:"EAP653", ref:"TP-Link Omada EAP653", desc:"Wi-Fi 6 AX3000, plafond", bands:[2.4, 5], poe:13.5, poeStd:"PoE+ 802.3at"},
   {id:"EAP650", ref:"TP-Link Omada EAP650", desc:"Wi-Fi 6 AX3000, plafond", bands:[2.4, 5], poe:15.5, poeStd:"PoE+ 802.3at"},
+  {id:"EAP660HD", ref:"TP-Link Omada EAP660 HD", desc:"Wi-Fi 6 AX3600 haute densité, plafond, port 2,5 Gb/s", bands:[2.4, 5], poe:18.5, poeStd:"PoE+ 802.3at"},
   {id:"EAP670", ref:"TP-Link Omada EAP670", desc:"Wi-Fi 6 AX5400, plafond, port 2,5 Gb/s", bands:[2.4, 5], poe:20.8, poeStd:"PoE+ 802.3at"},
+  /* Ubiquiti UniFi */
   {id:"U6PLUS", ref:"Ubiquiti UniFi U6+", desc:"Wi-Fi 6, plafond", bands:[2.4, 5], poe:9, poeStd:"PoE"},
   {id:"U6PRO", ref:"Ubiquiti UniFi U6 Pro", desc:"Wi-Fi 6, plafond", bands:[2.4, 5], poe:13, poeStd:"PoE (PoE+ conseillé)"},
   {id:"U7PRO", ref:"Ubiquiti UniFi U7 Pro", desc:"Wi-Fi 7 tri-bande 2,4 / 5 / 6 GHz, plafond", bands:[2.4, 5, 6], poe:21, poeStd:"PoE+ 802.3at"},
@@ -796,7 +802,7 @@ function place(t, x, y){
     it = {id:uid(), type:t, plan:pl.id, x, y, name: nextName(c.pre)};
     if (t === "cam"){ const last = lastCam(); Object.assign(it, {angle:90, fov:70, r:4, cam:last.cam, focal:last.focal, hgt:3, tilt:30}); }
     if (c.qty) it.qty = 1;
-    if (t === "ap" || t === "dect"){ let v = null; try { v = localStorage.getItem("atelier-" + t); } catch (e) {} if (v && (t === "ap" ? APS : DECTS).some(m => m.id === v)) it.rm = v; }
+    if (t === "ap" || t === "dect"){ let v = null; try { v = localStorage.getItem("atelier-" + t); } catch (e) {} it.rm = v && (t === "ap" ? APS : DECTS).some(m => m.id === v) ? v : (t === "ap" ? "EAP653" : "W70B"); }
     P.items.push(it);
   }
   sel = it.id; if (single) setTool("select");

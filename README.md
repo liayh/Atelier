@@ -95,7 +95,7 @@ Dans le panneau d'une borne, choisir le **modèle** (catalogues `APS` et `DECTS`
 **puissance d'émission**. Le type de local se règle par plan (« Ce plan » → Type de local) :
 espace ouvert, officine / bureaux, nombreuses cloisons, béton. Case « Couvertures WiFi / DECT » pour masquer.
 
-- **WiFi** : rayon estimé par un modèle de propagation intérieure (plafond réglementaire européen :
+- **WiFi** (gamme TP-Link Omada Wi-Fi 6 par défaut : EAP610, EAP620 HD, EAP653, EAP650, EAP660 HD, EAP670 ; Ubiquiti UniFi en option) : rayon estimé par un modèle de propagation intérieure (plafond réglementaire européen :
   PIRE 20 dBm en 2,4 GHz, 23 dBm en 5 / 6 GHz ; marge client 5 dB). Cercle plein : 5 GHz excellent
   (≥ −67 dBm, voix et visio) ; pointillés : 5 GHz correct (≥ −75 dBm) et 2,4 GHz excellent.
   La portée dépend du local bien plus que du modèle ; le modèle donne norme, bandes, PoE et référence.
