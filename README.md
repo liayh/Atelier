@@ -76,3 +76,15 @@ npm run dist:linux # construit l'AppImage et le .deb
 npm run icon       # régénère build/icon.png depuis build/icon.svg
 ```
 Pour une nouvelle version : changer `version` dans `package.json`, puis `npm run dist:win`.
+
+## Caméras : modèles Dahua et zones DORI
+
+Dans le panneau d'une caméra, choisir le **modèle** (catalogue `CAMS` dans `Atelier_implantation.html`),
+l'**objectif** (ou la focale d'une varifocale), la **direction**, la **hauteur de pose** et l'**inclinaison**.
+Le plan affiche alors les zones **DORI** (norme EN 62676-4) : identifier, reconnaître, observer (bandes),
+détecter (arc), la portée **infrarouge** de nuit et la **zone morte** au pied de la caméra.
+La consommation PoE vient du modèle ; la liste du matériel et le rapport PDF (page « Caméras »)
+reprennent les références. Les anciennes caméras restent en mode « générique » (réglage manuel).
+
+Données reprises des fiches techniques Dahua ; à compléter ou corriger dans `CAMS` (une ligne par modèle).
+La référence IPC-HDW1330T1-S4 remplace provisoirement la « HDW1330E », introuvable sous ce nom.
