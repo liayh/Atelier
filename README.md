@@ -76,3 +76,32 @@ npm run dist:linux # construit l'AppImage et le .deb
 npm run icon       # régénère build/icon.png depuis build/icon.svg
 ```
 Pour une nouvelle version : changer `version` dans `package.json`, puis `npm run dist:win`.
+
+## Signature du programme (Windows)
+
+Un programme signé n'est plus bloqué par SmartScreen et inspire confiance à l'antivirus.
+Il faut un **certificat de signature de code** (Authenticode) au nom de l'éditeur :
+- entreprise de l'UE : **Azure Artifact Signing** (abonnement mensuel, le moins cher) ;
+- particulier ou entreprise : certificat **OV** d'une autorité (ex. Certum, version carte ou cloud SimplySign).
+
+La compilation signe tout seule (application, installateur, désinstallateur) dès que les
+variables ci-dessous sont définies ; sinon elle produit des fichiers non signés.
+Si la signature est demandée et échoue, la compilation s'arrête.
+
+```bash
+# Certificat en fichier .pfx (à garder HORS du dossier du projet)
+ATELIER_SIGN=pfx ATELIER_PFX=~/certs/atelier.pfx ATELIER_PFX_PASSWORD='…' npm run dist:win
+
+# Azure Artifact Signing
+ATELIER_SIGN=azure ATELIER_AZURE_ENDPOINT=weu.codesigning.azure.net \
+ATELIER_AZURE_ACCOUNT=<compte> ATELIER_AZURE_PROFILE=<profil> \
+ATELIER_AZURE_TOKEN="$(az account get-access-token --resource https://codesigning.azure.net --query accessToken -o tsv)" \
+npm run dist:win
+
+# Carte / jeton matériel ou autre cas : options jsign directes
+ATELIER_SIGN=jsign ATELIER_JSIGN_ARGS='--storetype PKCS11 --keystore <config> --storepass <PIN> --alias <alias>' npm run dist:win
+```
+
+À la fin, chaque `.exe` est contrôlé : signataire, horodatage, reconnaissance par les autorités publiques.
+Outils : `scripts/sign.js` (jsign) et `build/signing.Dockerfile` (image de compilation).
+`TARGETS=zip npm run dist:win` ne produit que le zip portable.
