@@ -41,18 +41,19 @@ les réutilise pour les nouveaux projets.
   l'ouverture des fichiers `.atelier` par double-clic.
 
 ## Catalogue d'éléments (v1.3)
-La palette au-dessus du plan est organisée en quatre onglets. Un seul tableau (`CAT`, en haut du script de
+La palette au-dessus du plan est organisée en cinq onglets. Un seul tableau (`CAT`, en haut du script de
 `Atelier_implantation.html`) décrit chaque élément : catégorie, couleur, symbole, type de câble, modèle, PoE.
 Ajouter un équipement = ajouter une ligne dans ce tableau.
 
 | Onglet | Éléments |
 |---|---|
-| Réseau | borne WiFi, prise RJ45, baie, arrivée fibre, gaine montante, routeur multiWAN, box secours 4G |
+| Réseau | borne WiFi, prise RJ45, baie, arrivée fibre, gaine montante, routeur multiWAN, box secours 4G, switch 52 ports, NAS |
 | Téléphonie | poste IP filaire (Yealink T53), base DECT IP (W70B), combiné sans fil (W73H), adaptateur fax (PAP2T) |
 | Alarme | centrale, clavier, sirène, détecteur IR, bouton agression, interphonie (levée de doute), secours GSM, lecteur d'accès |
 | Vidéo | caméra, caméra 4 vues, enregistreur NVR (4, 8, 16 ou 32 voies), écran de contrôle, switch PoE |
+| Officine | PC, PC portable, écran, scanner, TPE, TPE sans fil, LSV, KAP, TMJ, TMH, imprimante, multifonction, serveur, sauvegarde RDX, onduleur, PDA / terminal mobile, pistolet scanner |
 
-- Les éléments « Cat6 » (bornes, prises, caméras, postes, bases DECT, adaptateur fax, box 4G) sont reliés à la **baie**.
+- Les éléments « Cat6 » (bornes, prises, caméras, postes, bases DECT, adaptateur fax, box 4G, PC, PC portable, imprimante, multifonction, serveur) sont reliés à la **baie**.
   Ils comptent dans les ports du switch, le PoE (si renseigné) et les tourets.
 - Les éléments d'alarme sont reliés à la **centrale** par un câble d'alarme, tracé en pointillés magenta et compté à part
   (pas de limite de 90 m). Les coudes, le tracé automatique et la gaine montante fonctionnent comme pour le Cat6.

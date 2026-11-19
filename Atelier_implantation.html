@@ -163,13 +163,13 @@ const f1 = n => Math.round(n * 10) / 10;
 const uid = () => Math.random().toString(36).slice(2, 9);
 
 /* ---------- catalogue des éléments ----------
-   g     : catégorie de la palette (net, tel, alm, vid)
+   g     : catégorie de la palette (net, tel, alm, vid, off)
    link  : "cat6" = câble réseau vers la baie ; "alarm" = câble d'alarme vers la centrale ; absent = pas de câble tracé
    pre   : préfixe de numérotation (AP1, TEL2…) ; uniq = un seul dans le projet ; perPlan = un seul par plan
    drop  : descente de câble comptée en plus du tracé (m) ; qty : nombre max d'unités par repère
    poe   : consommation PoE par défaut (W), modifiable élément par élément
    svg   : symbole dessiné autour de (0,0), c = couleur de l'élément */
-const A = "#be185d", T = "#0e7490", G = "#475569", K = "#374151";
+const A = "#be185d", T = "#0e7490", G = "#475569", K = "#374151", O = "#a16207";
 const txt = (s, y, fs) => `<text y="${y}" text-anchor="middle" font-size="${fs}" font-weight="700" fill="#fff" font-family="IBM Plex Sans,sans-serif">${s}</text>`;
 const box = (w, h, c, r) => `<rect x="${-w / 2}" y="${-h / 2}" width="${w}" height="${h}" rx="${r || 2}" fill="${c}" stroke="#fff" stroke-width="1.4"/>`;
 const CAT = {
@@ -191,6 +191,10 @@ const CAT = {
         svg:c => box(22, 12, c) + `<path d="M-6,-6L-8,-11M6,-6L8,-11" stroke="${c}" stroke-width="1.5"/><g fill="#fff"><circle cx="-5" r="1.3"/><circle cx="0" r="1.3"/><circle cx="5" r="1.3"/></g>`},
   b4g: {g:"net", label:"Box secours 4G", c:G, link:"cat6", pre:"4G", drop:1.5, model:"Box Secours 4G (à placer où le signal est bon)",
         svg:c => box(18, 14, c, 3) + txt("4G", 3.4, 9)},
+  sw52:{g:"net", label:"Switch 52 ports", c:G, pre:"S52", model:"Switch 52 ports (dans la baie)",
+        svg:c => box(26, 9, c, 1.5) + `<g fill="#fff"><rect x="-10" y="-1.5" width="2.4" height="3"/><rect x="-6" y="-1.5" width="2.4" height="3"/><rect x="-2" y="-1.5" width="2.4" height="3"/><rect x="2" y="-1.5" width="2.4" height="3"/><rect x="6" y="-1.5" width="2.4" height="3"/></g>`},
+  nas: {g:"net", label:"NAS", c:G, pre:"NAS", model:"NAS (dans la baie)",
+        svg:c => box(18, 16, c, 2) + `<path d="M-5,-4h10M-5,0h10M-5,4h10" stroke="#94a3b8" stroke-width="1.6"/>`},
 
   /* Téléphonie (devis DE23026) */
   tel: {g:"tel", label:"Poste IP filaire", c:T, link:"cat6", pre:"TEL", drop:2.5, poe:4, model:"Yealink T53 + alim 5V/2A si pas de PoE",
@@ -230,9 +234,45 @@ const CAT = {
   ecr: {g:"vid", label:"Écran de contrôle", c:K, pre:"ECR", model:"Écran LCD 24'' + support + cordon HDMI",
         svg:c => box(22, 14, c, 1.5) + `<path d="M-5,9h10M0,6v3" stroke="${c}" stroke-width="2"/>`},
   swp: {g:"vid", label:"Switch PoE", c:K, pre:"SW", model:"Switch 16 ports PoE (dans la baie)",
-        svg:c => box(26, 9, c, 1.5) + `<g fill="#fff"><rect x="-10" y="-1.5" width="3" height="3"/><rect x="-5" y="-1.5" width="3" height="3"/><rect x="0" y="-1.5" width="3" height="3"/><rect x="5" y="-1.5" width="3" height="3"/></g>`}
+        svg:c => box(26, 9, c, 1.5) + `<g fill="#fff"><rect x="-10" y="-1.5" width="3" height="3"/><rect x="-5" y="-1.5" width="3" height="3"/><rect x="0" y="-1.5" width="3" height="3"/><rect x="5" y="-1.5" width="3" height="3"/></g>`},
+
+  /* Officine : postes de travail et périphériques (plan Pharmacie Pôle Sud) */
+  pc:  {g:"off", label:"PC", c:O, link:"cat6", pre:"PC", drop:2.5, model:"PC Windows 11 (poste de travail)",
+        svg:c => box(20, 13, c, 1.5) + `<path d="M-5,8h10M0,6.5v1.6" stroke="${c}" stroke-width="2"/>` + txt("PC", 3, 8.5)},
+  pcp: {g:"off", label:"PC portable", c:O, link:"cat6", pre:"PO", drop:2.5, model:"PC portable",
+        svg:c => `<rect x="-8" y="-7" width="16" height="10" rx="1.5" fill="${c}" stroke="#fff" stroke-width="1.4"/><path d="M-11,6h22l-2,-3h-18z" fill="${c}" stroke="#fff" stroke-width="1.2"/>`},
+  ecran:{g:"off", label:"Écran", c:O, pre:"EC", qty:4, model:"Écran (un par poste, ou deux)",
+        svg:c => box(20, 13, c, 1.5) + `<path d="M-5,8h10M0,6.5v1.6" stroke="${c}" stroke-width="2"/><rect x="-8" y="-4.5" width="16" height="8" fill="#e2e8f0" opacity=".85"/>`},
+  scan:{g:"off", label:"Scanner", c:O, pre:"SC", qty:4, model:"Scanner code-barres / datamatrix",
+        svg:c => box(18, 14, c, 2) + `<path d="M-6,-3v6M-3.6,-3v6M-1.2,-3v6M1.2,-3v6M3.6,-3v6M6,-3v6" stroke="#fff" stroke-width="1"/><path d="M-8,0h16" stroke="#fecaca" stroke-width="1.2"/>`},
+  tpe: {g:"off", label:"TPE", c:O, pre:"TPE", qty:4, model:"Terminal de paiement",
+        svg:c => box(13, 18, c, 2) + `<rect x="-4.5" y="-7" width="9" height="4" fill="#e2e8f0"/><g fill="#fff"><circle cx="-2.6" cy="1" r="1"/><circle cx="0" cy="1" r="1"/><circle cx="2.6" cy="1" r="1"/><circle cx="-2.6" cy="4.5" r="1"/><circle cx="0" cy="4.5" r="1"/><circle cx="2.6" cy="4.5" r="1"/></g>`},
+  tpes:{g:"off", label:"TPE sans fil", c:O, pre:"TPS", model:"Terminal de paiement sans fil (avec base)",
+        svg:c => box(13, 18, c, 2) + `<rect x="-4.5" y="-7" width="9" height="4" fill="#e2e8f0"/><path d="M-3,3a4,4 0 0 1 6,0M-1.5,5.6a1.8,1.8 0 0 1 3,0" stroke="#fff" stroke-width="1.3" fill="none"/>`},
+  lsv: {g:"off", label:"LSV", c:O, pre:"LSV", qty:4, model:"LSV",
+        svg:c => box(20, 13, c, 2) + txt("LSV", 3, 8)},
+  kap: {g:"off", label:"KAP", c:O, pre:"KAP", qty:4, model:"KAP",
+        svg:c => box(20, 13, c, 2) + txt("KAP", 3, 8)},
+  tmj: {g:"off", label:"TMJ", c:O, pre:"TMJ", qty:4, model:"TMJ",
+        svg:c => box(20, 13, c, 2) + txt("TMJ", 3, 8)},
+  tmh: {g:"off", label:"TMH", c:O, pre:"TMH", qty:4, model:"TMH",
+        svg:c => box(20, 13, c, 2) + txt("TMH", 3, 8)},
+  imp: {g:"off", label:"Imprimante", c:O, link:"cat6", pre:"IMP", drop:2.5, model:"Imprimante réseau (Brother)",
+        svg:c => box(20, 12, c, 2) + `<rect x="-6" y="-9" width="12" height="5" fill="#e2e8f0" stroke="${c}"/><rect x="-6" y="3" width="12" height="5" fill="#fff" stroke="${c}"/>`},
+  mfc: {g:"off", label:"Multifonction", c:O, link:"cat6", pre:"MFC", drop:2.5, model:"Imprimante multifonction MFC (Brother)",
+        svg:c => box(22, 13, c, 2) + txt("MFC", 3, 8)},
+  srv: {g:"off", label:"Serveur", c:O, link:"cat6", pre:"SRV", drop:1.5, model:"Serveur (poste serveur)",
+        svg:c => box(16, 20, c, 2) + `<path d="M-5,-5h10M-5,0h10M-5,5h10" stroke="#fff" stroke-width="1.6"/><circle cx="4" cy="-8" r="1" fill="#22c55e"/>`},
+  rdx: {g:"off", label:"Sauvegarde RDX", c:O, pre:"RDX", model:"Lecteur de sauvegarde RDX (au poste serveur)",
+        svg:c => box(22, 12, c, 2) + txt("RDX", 3, 8)},
+  ond: {g:"off", label:"Onduleur", c:O, pre:"OND", model:"Onduleur (au poste serveur)",
+        svg:c => box(18, 16, c, 2) + `<path d="M-3,-6L1,-1H-1L3,6" stroke="#fde047" stroke-width="1.8" fill="none" stroke-linejoin="round"/>`},
+  pda: {g:"off", label:"PDA / terminal mobile", c:O, pre:"PDA", model:"Terminal mobile : PDA Memor / Zebra TC21 (WiFi)",
+        svg:c => box(11, 19, c, 2.5) + `<rect x="-3.8" y="-6.5" width="7.6" height="8" fill="#e2e8f0"/><circle cy="5.5" r="1.4" fill="#fff"/>`},
+  pist:{g:"off", label:"Pistolet scanner", c:O, pre:"PIS", model:"Pistolet de lecture (liaison au PDA / poste)",
+        svg:c => `<path d="M-8,-6h12v5h-5v7h-4v-7h-3z" fill="${c}" stroke="#fff" stroke-width="1.4" stroke-linejoin="round"/>`}
 };
-const GROUPS = [["net", "Réseau"], ["tel", "Téléphonie"], ["alm", "Alarme"], ["vid", "Vidéo"]];
+const GROUPS = [["net", "Réseau"], ["tel", "Téléphonie"], ["alm", "Alarme"], ["vid", "Vidéo"], ["off", "Officine"]];
 const COL = Object.fromEntries(Object.entries(CAT).map(([k, v]) => [k, v.c]));
 const NAMES = Object.fromEntries(Object.entries(CAT).map(([k, v]) => [k, v.label]));
 const HUB = {cat6:"ba", alarm:"cen"};                       // vers quoi chaque type de câble est tiré
