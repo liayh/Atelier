@@ -15,8 +15,9 @@ azure_load() {
   if [[ "$(stat -c %a "$AZ_CONFIG")" != 600 ]]; then chmod 600 "$AZ_CONFIG"; fi
   # shellcheck disable=SC1090
   set -a; source "$AZ_CONFIG"; set +a
-  local v
-  for v in AZ_TENANT AZ_CLIENT_ID AZ_CLIENT_SECRET AZ_ACCOUNT AZ_PROFILE AZ_ENDPOINT; do
+  local v vars="AZ_ACCOUNT AZ_PROFILE AZ_ENDPOINT"
+  [[ "${AZ_MODE:-robot}" == robot ]] && vars="AZ_TENANT AZ_CLIENT_ID AZ_CLIENT_SECRET $vars"
+  for v in $vars; do
     if [[ -z "${!v:-}" ]]; then echo "Configuration incomplète ($v manquant) : relancer « npm run sign:setup »." >&2; return 1; fi
   done
 }
@@ -42,6 +43,17 @@ azure_token() {
 # Prépare les variables lues par scripts/sign.js (mode ATELIER_SIGN=azure).
 azure_export_for_sign() {
   azure_load || return 1
+  if [[ "${AZ_MODE:-robot}" == jeton ]]; then
+    # Jeton personnel obtenu dans Cloud Shell (valable environ 1 h), saisi sans s'afficher.
+    if [[ -z "${ATELIER_AZURE_TOKEN:-}" ]]; then
+      echo "Jeton Azure : dans Cloud Shell (shell.azure.com), lancer"
+      echo "  az account get-access-token --resource https://codesigning.azure.net --query accessToken -o tsv"
+      read -r -s -p "puis coller le jeton ici (la saisie reste invisible) : " ATELIER_AZURE_TOKEN < /dev/tty; echo
+    fi
+    [[ "$ATELIER_AZURE_TOKEN" =~ ^eyJ[A-Za-z0-9._-]+$ ]] || { echo "Ce n'est pas un jeton Azure valide (il commence par eyJ)." >&2; return 1; }
+    export ATELIER_AZURE_TOKEN ATELIER_AZURE_ENDPOINT="$AZ_ENDPOINT" ATELIER_AZURE_ACCOUNT="$AZ_ACCOUNT" ATELIER_AZURE_PROFILE="$AZ_PROFILE"
+    return 0
+  fi
   ATELIER_AZURE_TOKEN="$(azure_token)" || return 1
   export ATELIER_AZURE_TOKEN ATELIER_AZURE_ENDPOINT="$AZ_ENDPOINT" \
          ATELIER_AZURE_ACCOUNT="$AZ_ACCOUNT" ATELIER_AZURE_PROFILE="$AZ_PROFILE"

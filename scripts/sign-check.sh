@@ -7,9 +7,9 @@ cd "$(dirname "$0")/.."
 source scripts/azure-signing.sh
 
 echo "1/3 Lecture de la configuration…"; azure_load
-echo "2/3 Connexion à Azure avec le compte robot…"
+echo "2/3 Accès Azure ($([[ ${AZ_MODE:-robot} == jeton ]] && echo "jeton personnel" || echo "compte robot"))…"
 azure_export_for_sign
-echo "    connexion OK"
+echo "    prêt"
 
 IMAGE=atelier-builder-sign:jsign-7.6
 if ! docker image inspect "$IMAGE" >/dev/null 2>&1; then

@@ -56,7 +56,14 @@ exports.default = async function sign(config) {
   const r = spawnSync('java', args, { stdio: ['ignore', 'pipe', 'pipe'], encoding: 'utf8' });
   // Ne jamais afficher la ligne de commande : elle contient le mot de passe ou le jeton.
   if (r.status !== 0) {
-    throw new Error(`Signature échouée pour ${file} :\n${(r.stderr || r.stdout || r.error || '').toString().trim()}`);
+    // Message lisible : lignes utiles de jsign (sans la pile Java) + cause probable selon le code HTTP.
+    const raw = (r.stderr || r.stdout || r.error || '').toString();
+    const lines = raw.split(/\r?\n/).filter((l) => /^(jsign:|Caused by:)/.test(l.trim())).map((l) => '  ' + l.trim().replace(/^Caused by: [\w.]+: /, ''));
+    const code = (raw.match(/HTTP Error (\d{3})/) || [])[1];
+    const hint = { 401: 'jeton Azure expiré ou invalide : en obtenir un nouveau (valable environ 1 h).',
+      403: "droit de signer manquant : rôle « Artifact Signing Certificate Profile Signer » sur le compte de signature.",
+      404: "compte ou profil de certificat introuvable : le profil n'existe qu'après la validation de l'identité de BLL." }[code];
+    throw new Error(`Signature échouée pour ${file}${hint ? ` — ${hint}` : ''}\n${lines.join('\n') || raw.trim().split('\n').slice(0, 3).join('\n')}`);
   }
   console.log(`  • signé : ${file}`);
 };

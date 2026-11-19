@@ -154,6 +154,14 @@ Préparation unique dans le portail Azure (compte M365 de BLL) :
 6. Microsoft Entra ID → Inscriptions d'applications → `atelier-signature` → secret client.
 7. IAM du compte → rôle **Artifact Signing Certificate Profile Signer** pour `atelier-signature`.
 
+Plus simple : coller dans **Cloud Shell** (shell.azure.com, Bash) le script `scripts/azure-setup.sh`
+(`curl -sL https://raw.githubusercontent.com/liayh/Atelier/<branche>/scripts/azure-setup.sh | bash`) : il essaie
+les régions européennes (West Europe est fermée aux nouveaux clients ; compte BLL créé en **North Europe**,
+point d'accès `neu.codesigning.azure.net`). Sans droit de créer un compte robot dans l'annuaire, il donne le
+droit de signer à l'utilisateur : **mode « jeton personnel »**, le jeton (environ 1 h) étant obtenu dans Cloud Shell
+au moment de compiler :
+`az account get-access-token --resource https://codesigning.azure.net --query accessToken -o tsv`
+
 Puis, sur le poste de compilation :
 ```bash
 npm run sign:setup        # saisie des identifiants (fichier privé ~/.config/atelier-signature, droits 600)
