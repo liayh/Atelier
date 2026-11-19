@@ -1,12 +1,16 @@
 #!/usr/bin/env bash
 # Prépare Azure Artifact Signing pour BLL. À coller dans un terminal Azure déjà connecté
 # (vscode.dev/azure ou Cloud Shell, en Bash). Ne contient aucun secret.
-# Crée : groupe de ressources, compte de signature (West Europe, Basic), compte robot de compilation
+# Crée : groupe de ressources, compte de signature (Europe, offre Basic), compte robot de compilation
 # et ses droits. La validation de l'identité de BLL reste à faire dans le portail (impossible en ligne
 # de commande, d'après Microsoft). Facturation Artifact Signing : dès la création du compte.
 set -euo pipefail
 RG=atelier-signature
-LOC=westeurope
+LOC=westeurope   # emplacement du groupe de ressources seulement
+# Régions du service de signature, par ordre de préférence (Europe d'abord) et leur point d'accès.
+# West Europe refuse les nouveaux clients (RequestDisallowedByAzure) : on essaie les suivantes.
+REGIONS="northeurope:neu polandcentral:plc switzerlandnorth:swn westeurope:weu"
+
 SUB=$(az account show --query id -o tsv)
 TENANT=$(az account show --query tenantId -o tsv)
 ACC="bllatelier$(echo "$SUB" | tr -dc 'a-z0-9' | cut -c1-6)"   # nom unique au monde, 3 à 24 caractères
@@ -18,8 +22,20 @@ echo "2/6 Groupe de ressources $RG ($LOC)…"
 az group create -n "$RG" -l "$LOC" -o none
 
 echo "3/6 Compte de signature $ACC (offre Basic)…"
-az artifact-signing show -n "$ACC" -g "$RG" -o none 2>/dev/null \
-  || az artifact-signing create -n "$ACC" -g "$RG" -l "$LOC" --sku Basic -o none
+SIGLOC=$(az artifact-signing show -n "$ACC" -g "$RG" --query location -o tsv 2>/dev/null || true)
+if [ -z "$SIGLOC" ]; then
+  for r in $REGIONS; do
+    echo "    essai dans la région ${r%%:*}…"
+    if az artifact-signing create -n "$ACC" -g "$RG" -l "${r%%:*}" --sku Basic -o none 2>/tmp/as-err; then SIGLOC=${r%%:*}; break; fi
+    grep -q -i "not accepting new customers\|RequestDisallowedByAzure\|LocationNotAvailable\|NoRegisteredProviderFound" /tmp/as-err \
+      || { cat /tmp/as-err; exit 1; }
+    echo "    région fermée aux nouveaux clients, suivante."
+  done
+  [ -n "$SIGLOC" ] || { echo "Aucune région européenne disponible : me contacter."; exit 1; }
+fi
+SIGLOC=$(echo "$SIGLOC" | tr -d ' ' | tr 'A-Z' 'a-z')
+EP=""; for r in $REGIONS; do [ "${r%%:*}" = "$SIGLOC" ] && EP="${r##*:}.codesigning.azure.net"; done
+echo "    compte créé dans $SIGLOC (point d'accès $EP)"
 SCOPE=$(az artifact-signing show -n "$ACC" -g "$RG" --query id -o tsv)
 
 role() {  # role <id objet> <type> <nom actuel> <ancien nom>
@@ -50,7 +66,7 @@ ID de l'annuaire (tenant)       : $TENANT
 ID d'application (client)       : $APP
 Nom du compte de signature      : $ACC
 Nom du profil de certificat     : atelier   (à créer après la validation de BLL)
-Point d'accès de la région      : weu.codesigning.azure.net
+Point d'accès de la région      : $EP
 Secret client (à garder privé)  : $SECRET
 =========================================================================
 Le secret ne sera plus jamais affiché : copie-le maintenant, ne l'envoie à personne.
