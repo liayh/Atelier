@@ -12,7 +12,10 @@
     "icon": "electron scripts/make-icon.js",
     "start": "npm run sync && electron .",
     "dist:win": "npm run sync && bash scripts/build-win.sh",
-    "dist:linux": "npm run sync && electron-builder --linux AppImage deb --x64"
+    "dist:linux": "npm run sync && electron-builder --linux AppImage deb --x64",
+    "sign:setup": "bash scripts/sign-setup.sh",
+    "sign:check": "bash scripts/sign-check.sh",
+    "dist:win:signed": "npm run sync && ATELIER_SIGN=azure bash scripts/build-win.sh"
   },
   "build": {
     "appId": "fr.devben.atelierimplantation",

@@ -92,11 +92,10 @@ Si la signature est demandée et échoue, la compilation s'arrête.
 # Certificat en fichier .pfx (à garder HORS du dossier du projet)
 ATELIER_SIGN=pfx ATELIER_PFX=~/certs/atelier.pfx ATELIER_PFX_PASSWORD='…' npm run dist:win
 
-# Azure Artifact Signing
-ATELIER_SIGN=azure ATELIER_AZURE_ENDPOINT=weu.codesigning.azure.net \
-ATELIER_AZURE_ACCOUNT=<compte> ATELIER_AZURE_PROFILE=<profil> \
-ATELIER_AZURE_TOKEN="$(az account get-access-token --resource https://codesigning.azure.net --query accessToken -o tsv)" \
-npm run dist:win
+# Azure Artifact Signing (BLL) : une fois pour toutes, puis test, puis compilation signée
+npm run sign:setup        # enregistre tenant, application, compte, profil et secret (fichier privé)
+npm run sign:check        # teste la chaîne complète sur un petit .exe (1 signature)
+npm run dist:win:signed   # installateur + zip portable signés
 
 # Carte / jeton matériel ou autre cas : options jsign directes
 ATELIER_SIGN=jsign ATELIER_JSIGN_ARGS='--storetype PKCS11 --keystore <config> --storepass <PIN> --alias <alias>' npm run dist:win

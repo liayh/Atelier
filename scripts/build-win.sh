@@ -16,6 +16,13 @@ if [[ "$(uname -s)" != Linux ]]; then
   exec npx electron-builder --win $TARGETS --x64
 fi
 
+# Signature Azure : jeton obtenu ici avec le compte robot (npm run sign:setup).
+if [[ "${ATELIER_SIGN:-}" == azure && -z "${ATELIER_AZURE_TOKEN:-}" ]]; then
+  source scripts/azure-signing.sh
+  echo "Connexion à Azure pour la signature…"
+  azure_export_for_sign
+fi
+
 IMAGE=atelier-builder-sign:jsign-7.6
 if ! docker image inspect "$IMAGE" >/dev/null 2>&1; then
   echo "Préparation de l'image de compilation ($IMAGE)…"
@@ -55,7 +62,7 @@ if [[ -n "${ATELIER_SIGN:-}" ]]; then
       who=$(grep -m1 "Subject:" <<<"$out" | sed "s/^[[:space:]]*Subject: //")
       if [[ -z "$who" ]]; then echo "  ✗ NON SIGNÉ : $f"; bad=1; continue; fi
       grep -q "Timestamp Server Signature verification: ok" <<<"$out" && ts="horodatée" || ts="SANS horodatage valide"
-      grep -q "^Signature verification: ok" <<<"$out" && trust="reconnue par les autorités publiques" || trust="non reconnue (certificat de test ?)"
+      grep -q "^Signature verification: ok" <<<"$out" && trust="chaîne reconnue" || trust="chaîne non vérifiable sous Linux (Windows fait foi)"
       echo "  ✓ $f — $who — $ts — $trust"
     done
     exit $bad'
