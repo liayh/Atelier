@@ -88,3 +88,17 @@ reprennent les références. Les anciennes caméras restent en mode « génériq
 
 Données reprises des fiches techniques Dahua ; à compléter ou corriger dans `CAMS` (une ligne par modèle).
 La référence IPC-HDW1330T1-S4 remplace provisoirement la « HDW1330E », introuvable sous ce nom.
+
+## Bornes WiFi et DECT : modèles et couverture
+
+Dans le panneau d'une borne, choisir le **modèle** (catalogues `APS` et `DECTS`) et, pour le WiFi, la
+**puissance d'émission**. Le type de local se règle par plan (« Ce plan » → Type de local) :
+espace ouvert, officine / bureaux, nombreuses cloisons, béton. Case « Couvertures WiFi / DECT » pour masquer.
+
+- **WiFi** : rayon estimé par un modèle de propagation intérieure (plafond réglementaire européen :
+  PIRE 20 dBm en 2,4 GHz, 23 dBm en 5 / 6 GHz ; marge client 5 dB). Cercle plein : 5 GHz excellent
+  (≥ −67 dBm, voix et visio) ; pointillés : 5 GHz correct (≥ −75 dBm) et 2,4 GHz excellent.
+  La portée dépend du local bien plus que du modèle ; le modèle donne norme, bandes, PoE et référence.
+- **DECT** (Yealink W70B / W80B / W90B) : portée sûre (cloisons) et maximale (dégagé) des fiches Yealink ;
+  contrôle du nombre de combinés et alerte si plusieurs bases mono-cellule (pas de passage entre bases).
+- Rapport PDF : page « Bornes WiFi et DECT ». Estimations sans les murs : à confirmer par une mesure sur site.

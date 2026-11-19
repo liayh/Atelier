@@ -128,7 +128,7 @@ text.t{paint-order:stroke;stroke:#fff;stroke-width:3px;stroke-linejoin:round;fon
         </div>
       </div>
     </div>
-    <div class="hint" id="legend" style="display:flex;gap:14px;flex-wrap:wrap"><span><b style="color:#ea580c">━</b> fibre opérateur</span><span><b style="color:#1d4ed8">━</b> câble Cat6</span><span><b style="color:#9ca3af">━</b> chemin de câbles</span><span><b style="color:#6d28d9">╌</b> 230 V dédié baie</span><span><b style="color:#be185d">╌</b> câble d'alarme</span><span><i style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#15803d;opacity:0.55;vertical-align:-1px"></i> identifier <i style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#ca8a04;opacity:0.45;vertical-align:-1px"></i> reconnaître <i style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#ea580c;opacity:0.35;vertical-align:-1px"></i> observer <b style="color:#dc2626">╌</b> détecter <b style="color:#4338ca">┈</b> IR nuit <i style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#0f172a;opacity:0.2;vertical-align:-1px"></i> zone morte</span></div>
+    <div class="hint" id="legend" style="display:flex;gap:14px;flex-wrap:wrap"><span><b style="color:#ea580c">━</b> fibre opérateur</span><span><b style="color:#1d4ed8">━</b> câble Cat6</span><span><b style="color:#9ca3af">━</b> chemin de câbles</span><span><b style="color:#6d28d9">╌</b> 230 V dédié baie</span><span><b style="color:#be185d">╌</b> câble d'alarme</span><span><i style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#15803d;opacity:0.55;vertical-align:-1px"></i> identifier <i style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#ca8a04;opacity:0.45;vertical-align:-1px"></i> reconnaître <i style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#ea580c;opacity:0.35;vertical-align:-1px"></i> observer <b style="color:#dc2626">╌</b> détecter <b style="color:#4338ca">┈</b> IR nuit <i style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#0f172a;opacity:0.2;vertical-align:-1px"></i> zone morte</span><span><i style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#15803d;opacity:0.35;vertical-align:-1px"></i> WiFi 5 GHz excellent <b style="color:#15803d">╌</b> correct <b style="color:#15803d">┈</b> 2,4 GHz <i style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#0e7490;opacity:0.3;vertical-align:-1px"></i> DECT sûre <b style="color:#0e7490">╌</b> maximale</span></div>
     <div class="hint" id="hint">Glisser un câble : le faire passer où tu veux (double-clic sur un coude pour l'enlever). Maj+clic ou Maj+glisser : sélection multiple. Molette : zoom. Suppr : retirer. Ctrl+D : dupliquer. Ctrl+Z : annuler.</div>
   </section>
   <aside>
@@ -288,6 +288,56 @@ const CAMS = [
   {id:"HFW2441T-ZS", ref:"Dahua IPC-HFW2441T-ZS", desc:"Tube WizSense 4MP, 2,7-13,5 mm motorisé, IR 60 m", ir:60, vari:true,
    lens:[[2.7, 104, 54, [64, 25.6, 12.8, 6.4]], [13.5, 29, 16, [210, 84, 42, 21]]]},
 ];
+/* ---------- bornes WiFi et DECT ----------
+   WiFi : la portée dépend surtout du plafond réglementaire européen (PIRE 20 dBm en 2,4 GHz, 23 dBm en 5 et 6 GHz),
+   pas du modèle. Rayon estimé par un modèle de propagation intérieure (affaiblissement à 1 m + 10·n·log d,
+   n selon le local, marge client 5 dB). DECT : portées intérieures des fiches Yealink. */
+const APS = [
+  {id:"gen", ref:"Borne Wi-Fi 6 (générique)", desc:"bi-bande 2,4 / 5 GHz", bands:[2.4, 5], poe:15},
+  {id:"EAP650", ref:"TP-Link Omada EAP650", desc:"Wi-Fi 6 AX3000, plafond", bands:[2.4, 5], poe:15.5, poeStd:"PoE+ 802.3at"},
+  {id:"EAP670", ref:"TP-Link Omada EAP670", desc:"Wi-Fi 6 AX5400, plafond, port 2,5 Gb/s", bands:[2.4, 5], poe:20.8, poeStd:"PoE+ 802.3at"},
+  {id:"U6PLUS", ref:"Ubiquiti UniFi U6+", desc:"Wi-Fi 6, plafond", bands:[2.4, 5], poe:9, poeStd:"PoE"},
+  {id:"U6PRO", ref:"Ubiquiti UniFi U6 Pro", desc:"Wi-Fi 6, plafond", bands:[2.4, 5], poe:13, poeStd:"PoE (PoE+ conseillé)"},
+  {id:"U7PRO", ref:"Ubiquiti UniFi U7 Pro", desc:"Wi-Fi 7 tri-bande 2,4 / 5 / 6 GHz, plafond", bands:[2.4, 5, 6], poe:21, poeStd:"PoE+ 802.3at"},
+];
+const DECTS = [
+  {id:"W70B", ref:"Yealink W70B", desc:"base DECT IP mono-cellule, 10 combinés, 20 appels", rng:[20, 50], hs:10},
+  {id:"W80B", ref:"Yealink W80B", desc:"base DECT IP multi-cellule (système jusqu'à 100 combinés)", rng:[20, 50], sys:100},
+  {id:"W90B", ref:"Yealink W90B", desc:"base DECT IP multi-cellule grands sites (60 bases, 250 combinés)", rng:[30, 50], sys:250},
+];
+const BAND = {2.4:{eirp:20, pl1:40.2, lab:"2,4 GHz"}, 5:{eirp:23, pl1:46.4, lab:"5 GHz"}, 6:{eirp:23, pl1:48.4, lab:"6 GHz"}};
+const ENVS = [["open", "Espace ouvert, peu de cloisons", 2.6], ["bur", "Officine / bureaux", 3.0], ["clo", "Nombreuses cloisons, réserve", 3.4], ["bet", "Murs en béton ou pierre", 3.8]];
+const PWRS = [[0, "Maximale"], [-3, "Moyenne (−3 dB)"], [-6, "Faible (−6 dB)"]];
+const envOf = pl => ENVS.find(e => e[0] === ((pl && pl.env) || "bur")) || ENVS[1];
+const radioModel = d => d.type === "ap" ? APS.find(m => m.id === (d.rm || "gen")) || APS[0] : d.type === "dect" ? DECTS.find(m => m.id === (d.rm || "W70B")) || DECTS[0] : null;
+// Rayon (m) où le signal reçu atteint `thr` dBm sur la bande donnée.
+const wifiR = (d, band, thr) => { const B = BAND[band], n = envOf(planOf(d.plan))[2]; return Math.pow(10, (B.eirp + (d.pwr || 0) - 5 - thr - B.pl1) / (10 * n)); };
+function radioSvg(d, pl){
+  const m = radioModel(d), k = ppm(pl), C = (r, st) => `<circle cx="${d.x}" cy="${d.y}" r="${(r * k).toFixed(1)}" ${st} vector-effect="non-scaling-stroke" pointer-events="none"/>`;
+  if (d.type === "dect") return C(m.rng[1], `fill="none" stroke="#0e7490" stroke-opacity=".6" stroke-dasharray="7 4" stroke-width="1.2"`) + C(m.rng[0], `fill="#0e7490" fill-opacity=".09" stroke="#0e7490" stroke-opacity=".6" stroke-width="1"`);
+  return (m.bands.includes(2.4) ? C(wifiR(d, 2.4, -67), `fill="none" stroke="#15803d" stroke-opacity=".45" stroke-dasharray="2 4" stroke-width="1.2"`) : "")
+    + C(wifiR(d, 5, -75), `fill="none" stroke="#15803d" stroke-opacity=".6" stroke-dasharray="7 4" stroke-width="1.2"`)
+    + C(wifiR(d, 5, -67), `fill="#15803d" fill-opacity=".1" stroke="#15803d" stroke-opacity=".6" stroke-width="1"`);
+}
+function radioReadout(d){
+  const m = radioModel(d), r = v => Math.round(v) + " m";
+  if (d.type === "dect") return `<div class="kv"><span>Portée sûre (avec cloisons)</span><span>${r(m.rng[0])}</span></div><div class="kv"><span>Portée maximale (dégagé)</span><span>${r(m.rng[1])}</span></div>`
+    + `<div class="kv"><span>Capacité</span><span>${m.sys ? m.sys + " combinés (système)" : m.hs + " combinés par base"}</span></div>`;
+  return `<div class="kv"><span>Norme / bandes</span><span>${esc(m.desc.split(", ")[0])}</span></div>`
+    + `<div class="kv"><span>5 GHz excellent (voix, visio)</span><span>${r(wifiR(d, 5, -67))}</span></div>`
+    + `<div class="kv"><span>5 GHz correct (données)</span><span>${r(wifiR(d, 5, -75))}</span></div>`
+    + (m.bands.includes(2.4) ? `<div class="kv"><span>2,4 GHz excellent</span><span>${r(wifiR(d, 2.4, -67))}</span></div>` : "")
+    + (m.bands.includes(6) ? `<div class="kv"><span>6 GHz excellent</span><span>${r(wifiR(d, 6, -67))}</span></div>` : "")
+    + (m.poeStd ? `<div class="kv"><span>Alimentation</span><span>${esc(m.poeStd)}</span></div>` : "");
+}
+// Combinés DECT : combinés posés + 1 inclus par base, comparés à la capacité des bases.
+function dectCheck(){
+  const bases = P.items.filter(i => i.type === "dect"); if (!bases.length) return null;
+  const hs = P.items.filter(i => i.type === "comb").reduce((a, i) => a + (i.qty || 1), 0) + bases.length;
+  const multi = bases.map(radioModel).filter(m => m.sys), cap = multi.length ? Math.max(...multi.map(m => m.sys)) : bases.reduce((a, b) => a + radioModel(b).hs, 0);
+  const single = bases.filter(b => !radioModel(b).sys).length;
+  return {hs, cap, over:hs > cap, single};
+}
 const DORI = [["Détecter", "#dc2626"], ["Observer", "#ea580c"], ["Reconnaître", "#ca8a04"], ["Identifier", "#15803d"]];
 const camModel = d => d.type === "cam" ? CAMS.find(m => m.id === (d.cam || "gen")) || CAMS[0] : null;
 // Optique d'une caméra posée : angles et distances DORI pour sa focale (interpolés sur une varifocale).
@@ -325,10 +375,11 @@ const nvrFit = n => { const want = Math.max(0, camCh() - P.items.filter(i => isN
 const variantOf = i => isNvr(i) ? chOf(i) + " voies" : "";
 const modelOf = i => { if (isNvr(i)) return `NVR ${chOf(i)} voies, à placer dans la baie`;
   const m = camModel(i); if (m && !m.generic){ const o = optics(i); return `${m.ref} — ${m.desc}, objectif ${mm(o.focal)}`; }
+  const r = radioModel(i); if (r) return `${r.ref} — ${r.desc}`;
   return CAT[i.type].model; };
 
 let planId = null, sel = null, multi = new Set(), tool = "select", grp = "net", view = null, drag = null, scalePts = [], moved = false;
-const poeOf = d => d.poe != null ? d.poe : (camModel(d) && camModel(d).poe != null ? camModel(d).poe : (CAT[d.type].poe || 0));   // consommation PoE (W)
+const poeOf = d => { if (d.poe != null) return d.poe; const m = camModel(d) || radioModel(d); return m && m.poe != null ? m.poe : (CAT[d.type].poe || 0); };   // consommation PoE (W)
 const hasPoe = i => CAT[i.type].poe != null;
 const CORE_PRICES = [["ap", "Borne WiFi", "€ / u"], ["cam", "Caméra IP", "€ / u"], ["rj", "Prise RJ45", "€ / prise"], ["ba", "Baie de brassage", "€ / u"],
   ["sw", "Switch", "€ / u"], ["cable", "Câble Cat6", "€ / m"], ["fibre", "Fibre", "€ / m"], ["pose", "Pose et raccordement", "€ / point"]];
@@ -470,7 +521,8 @@ function render(pl, s, interactive){
     const cn = hubOf("alarm");
     if (cn && cn.plan === pl.id && g && P.plans.length > 1) out.push(poly([[cn.x, cn.y], [g.x - 5 * s, cn.y], [g.x - 5 * s, g.y]], `stroke="#be185d" stroke-width="1.8" stroke-dasharray="3 3"`));
   }
-  const doris = devs.filter(d => d.type === "cam" && optics(d)).map(d => doriSvg(d, pl, s)).join("");
+  const radios = pl.radio === false ? "" : P.items.filter(d => d.plan === pl.id && (d.type === "ap" || d.type === "dect")).map(d => radioSvg(d, pl)).join("");
+  const doris = radios + devs.filter(d => d.type === "cam" && optics(d)).map(d => doriSvg(d, pl, s)).join("");
   if (doris) out.push(`<defs><clipPath id="cadre-${pl.id}"><rect width="${pl.w}" height="${pl.h}"/></clipPath></defs><g clip-path="url(#cadre-${pl.id})">${doris}</g>`);
   devs.filter(d => d.type === "cam" && !optics(d)).forEach(d => {
     const r = d.r * ppm(pl), a1 = (d.angle - d.fov / 2) * Math.PI / 180, a2 = (d.angle + d.fov / 2) * Math.PI / 180;
@@ -554,6 +606,8 @@ function bilan(){
   const hasNet = ds.some(d => linkOf(d) === "cat6"), hasAlm = ds.some(d => linkOf(d) === "alarm");
   const poeUsed = ds.reduce((s, d) => s + poeOf(d), 0);
   const w = [];
+  const dc = dectCheck(); if (dc && dc.over) w.push(`DECT : ${dc.hs} combinés pour une capacité de ${dc.cap}. Ajouter une base ou passer en multi-cellule.`);
+  if (dc && dc.single > 1) w.push(`DECT : ${dc.single} bases mono-cellule (W70B) : un combiné ne passe pas d'une base à l'autre pendant un appel. Pour couvrir tout le site, utiliser des bases multi-cellule (W80B).`);
   if (P.items.some(isNvr) && camCh() > nvrCap()) w.push(`NVR : ${camCh()} voies nécessaires pour ${nvrCap()} disponibles. Choisis un NVR plus grand ou ajoute-en un.`);
   if (poeUsed > P.poe) w.push(`Budget PoE dépassé : ${f1(poeUsed)} W demandés pour ${P.poe} W disponibles sur le switch.`);
   if (!BA() && hasNet) w.push("Place la baie pour calculer les câbles.");
@@ -586,7 +640,7 @@ function stats(){
 function bom(){        // nomenclature : une ligne par type d'élément (et par taille de NVR), avec la répartition par plan
   const m = {};
   P.items.forEach(i => {
-    const p = planOf(i.plan); if (!CAT[i.type] || !p) return; const v = variantOf(i), k = i.type + "|" + v;
+    const p = planOf(i.plan); if (!CAT[i.type] || !p) return; const v = variantOf(i), mk = (camModel(i) || radioModel(i) || {}).id || "", k = i.type + "|" + v + "|" + mk + (i.type === "cam" ? "|" + (i.focal || "") : "");
     const e = m[k] || (m[k] = {type:i.type, label:CAT[i.type].label + (v ? " " + v : ""), model:modelOf(i), n:0, plans:{}});
     e.n += qtyOf(i); e.plans[p.name] = (e.plans[p.name] || 0) + qtyOf(i);
   });
@@ -602,9 +656,10 @@ function planPanel(){
   $("planbox").innerHTML = !pl ? `<span style="color:var(--muted)">Ajoute un plan pour commencer.</span>` :
     `<div class="field" style="grid-template-columns:70px 1fr"><label for="pl-name">Nom</label><input type="text" id="pl-name" value="${esc(pl.name)}"></div>
      <div class="field" style="grid-template-columns:1fr 80px"><label for="pl-z">Niveau : hauteur du sol (m)</label><input type="number" id="pl-z" step="0.1" value="${pl.z || 0}"></div>
+     <div class="field" style="grid-template-columns:1fr 190px"><label for="pl-env">Type de local (radio)</label><select id="pl-env">${ENVS.map(([v, l]) => `<option value="${v}"${v === envOf(pl)[0] ? " selected" : ""}>${l}</option>`).join("")}</select></div>
      <div class="kv"><span>Échelle</span><span>${pl.ppm ? f1(pl.ppm) + " px/m" : "à définir"}</span></div>
      <div class="field"><label for="pl-op">Opacité du plan</label><input type="range" id="pl-op" min="15" max="100" value="${Math.round((pl.op == null ? .6 : pl.op) * 100)}"><output></output></div>
-     <div class="row"><label class="row" style="font-size:13px"><input type="checkbox" id="pl-cab" ${pl.cables !== false ? "checked" : ""}> Voir les câbles</label><span class="sp"></span><button class="b danger" id="pl-del">Supprimer ce plan</button></div>`;
+     <div class="row"><label class="row" style="font-size:13px"><input type="checkbox" id="pl-cab" ${pl.cables !== false ? "checked" : ""}> Voir les câbles</label><label class="row" style="font-size:13px"><input type="checkbox" id="pl-radio" ${pl.radio !== false ? "checked" : ""}> Couvertures WiFi / DECT</label><span class="sp"></span><button class="b danger" id="pl-del">Supprimer ce plan</button></div>`;
 }
 function selPanel(){
   const s = item(sel), box = $("sel");
@@ -613,7 +668,7 @@ function selPanel(){
   const pl = planOf(s.plan);
   let h = `<div class="kv"><span>${NAMES[s.type]}</span><span>${esc(s.name || "")}</span></div><div class="kv"><span>Position</span><span>${f1((s.x) / ppm(pl))} m ; ${f1((s.y) / ppm(pl))} m</span></div>`;
   const c = CAT[s.type];
-  if (modelOf(s) && s.type !== "cam") h += `<div class="kv"><span>Modèle</span><span style="font-family:var(--sans);text-align:right">${esc(modelOf(s))}</span></div>`;
+  if (modelOf(s) && !["cam", "ap", "dect"].includes(s.type)) h += `<div class="kv"><span>Modèle</span><span style="font-family:var(--sans);text-align:right">${esc(modelOf(s))}</span></div>`;
   if (isNum(s)) h += `<div class="field" style="grid-template-columns:70px 1fr"><label for="s-name">Repère</label><input type="text" id="s-name" value="${esc(s.name)}"></div>`;
   if (isDev(s)){ const l = lens(s); if (l.raw != null) h += `<div class="kv"><span>Câble ${linkOf(s) === "alarm" ? "d'alarme " : ""}réel / à prévoir</span><span>${f1(l.raw)} m / ${l.order} m</span></div>`; }
   if (s.type === "cam"){
@@ -629,6 +684,13 @@ function selPanel(){
     if (m.generic) h += fld("s-fov", "Ouverture", 30, 120, s.fov, "°") + fld("s-r", "Portée", 2, 30, s.r, " m");
     else h += `<div class="field" style="grid-template-columns:1fr 70px"><label for="s-hgt">Hauteur de pose (m)</label><input type="number" id="s-hgt" min="1" max="15" step="0.1" value="${s.hgt != null ? s.hgt : 3}"></div>`
       + fld("s-tilt", "Inclinaison", 0, 90, s.tilt != null ? s.tilt : 30, "°") + `<div id="s-camro">${camReadout(s)}</div>`;
+  }
+  if (s.type === "ap" || s.type === "dect"){
+    const m = radioModel(s), list = s.type === "ap" ? APS : DECTS;
+    h += `<div class="field" style="grid-template-columns:70px 1fr"><label for="s-rm">Modèle</label><select id="s-rm">${list.map(x => `<option value="${x.id}"${x.id === m.id ? " selected" : ""}>${esc(x.ref)}</option>`).join("")}</select></div>`;
+    if (s.type === "ap") h += `<div class="field" style="grid-template-columns:1fr 150px"><label for="s-pwr">Puissance d'émission</label><select id="s-pwr">${PWRS.map(([v, l]) => `<option value="${v}"${v === (s.pwr || 0) ? " selected" : ""}>${l}</option>`).join("")}</select></div>`;
+    h += radioReadout(s) + `<div class="kv"><span>Local (réglé dans « Ce plan »)</span><span style="font-family:var(--sans)">${esc(envOf(pl)[1])}</span></div>`;
+    const dc = s.type === "dect" && dectCheck(); if (dc && dc.over) h += `<div class="warn">${dc.hs} combinés pour une capacité de ${dc.cap} : ajouter une base ou passer en multi-cellule.</div>`;
   }
   if (c.qty) h += `<div class="field" style="grid-template-columns:1fr 64px"><label for="s-qty">${s.type === "rj" ? "Nombre de prises" : "Nombre d'unités"}</label><input type="number" id="s-qty" min="1" max="${c.qty}" value="${s.qty || 1}"></div>`;
   if (isNvr(s)){
@@ -734,6 +796,7 @@ function place(t, x, y){
     it = {id:uid(), type:t, plan:pl.id, x, y, name: nextName(c.pre)};
     if (t === "cam"){ const last = lastCam(); Object.assign(it, {angle:90, fov:70, r:4, cam:last.cam, focal:last.focal, hgt:3, tilt:30}); }
     if (c.qty) it.qty = 1;
+    if (t === "ap" || t === "dect"){ let v = null; try { v = localStorage.getItem("atelier-" + t); } catch (e) {} if (v && (t === "ap" ? APS : DECTS).some(m => m.id === v)) it.rm = v; }
     P.items.push(it);
   }
   sel = it.id; if (single) setTool("select");
@@ -858,7 +921,7 @@ function scaleForm(){
 /* ---------- panneaux : événements délégués ---------- */
 $("tabs").addEventListener("click", e => { const b = e.target.closest("[data-plan]"); if (!b) return; planId = b.dataset.plan; sel = null; multi.clear(); sync(); fit(); save(); });
 $("rows").addEventListener("click", e => { const r = e.target.closest("[data-row]"); if (!r) return; const i = item(r.dataset.row); selectOnly(i.id); if (i.plan !== planId){ planId = i.plan; sync(); fit(); } else { draw(); panels(); } });
-const UNDOABLE = new Set(["pname", "ports", "poe", "tva", "pl-name", "pl-z", "pl-op", "pl-cab", "s-name", "s-angle", "s-fov", "s-r", "s-model", "s-focal", "s-hgt", "s-tilt", "s-qty", "s-poe", "s-ch", "s-vch"]);
+const UNDOABLE = new Set(["pname", "ports", "poe", "tva", "pl-name", "pl-z", "pl-op", "pl-cab", "s-name", "s-angle", "s-fov", "s-r", "s-model", "s-focal", "s-hgt", "s-tilt", "s-rm", "s-pwr", "pl-env", "pl-radio", "s-qty", "s-poe", "s-ch", "s-vch"]);
 document.addEventListener("input", e => {
   const id = e.target.id, pl = plan(), s = item(sel);
   if (UNDOABLE.has(id) || id.startsWith("pr-")) mark(id + ":" + (id.startsWith("s-") && s ? s.id : id.startsWith("pl-") && pl ? pl.id : ""));
@@ -868,6 +931,10 @@ document.addEventListener("input", e => {
   if (id === "pl-z"){ pl.z = parseFloat(e.target.value) || 0; panelsNoSel(); save(); }
   if (id === "pl-op"){ pl.op = e.target.value / 100; draw(); save(); }
   if (id === "pl-cab"){ pl.cables = e.target.checked; draw(); save(); }
+  if (id === "pl-radio"){ pl.radio = e.target.checked; draw(); save(); }
+  if (id === "pl-env"){ pl.env = e.target.value; refresh(); }
+  if (id === "s-rm" && s){ s.rm = e.target.value; delete s.poe; try { localStorage.setItem("atelier-" + s.type, s.rm); } catch (err) {} refresh(); }
+  if (id === "s-pwr" && s){ s.pwr = +e.target.value; refresh(); }
   if (id === "s-name" && s){ s.name = e.target.value || s.name; draw(); save(); }
   if (id === "s-angle" && s){ s.angle = +e.target.value; lite(); }
   if (id === "s-model" && s){ const m = CAMS.find(x => x.id === e.target.value); s.cam = m.id; if (!m.generic) s.focal = m.lens[0][0]; delete s.poe; rememberCam(s); refresh(); }
@@ -1020,6 +1087,23 @@ $("x-png").onclick = async () => {
 };
 
 /* ---------- rapport PDF : synthèse, matériel, liaisons, plans annotés ---------- */
+// Bornes WiFi regroupées par modèle (liste du matériel).
+function apLines(){
+  const g = {}; P.items.filter(i => i.type === "ap").forEach(i => { const k = radioModel(i).ref; g[k] = (g[k] || 0) + 1; });
+  const e = Object.entries(g); return e.length ? e.map(([k, n]) => [esc(k), n, ""]) : [["Borne WiFi", 0, ""]];
+}
+// Fiche des bornes WiFi et DECT : modèle, couverture estimée, alimentation.
+function radioSheet(){
+  const aps = P.items.filter(i => i.type === "ap"), ds = P.items.filter(i => i.type === "dect"); if (!aps.length && !ds.length) return "";
+  const r = v => Math.round(v) + " m", dc = dectCheck();
+  return `<section class="page"><h2>Bornes WiFi et DECT</h2><p class="sub">Couverture estimée sans tenir compte des murs dessinés : à confirmer par une mesure sur place. WiFi : plafond réglementaire européen, signal « excellent » ≥ −67 dBm (voix, visio), « correct » ≥ −75 dBm.</p>
+${aps.length ? `<h3>WiFi</h3><table><thead><tr><th>Repère</th><th>Modèle</th><th>Plan / local</th><th class="n">Puissance</th><th class="n">5 GHz excellent</th><th class="n">5 GHz correct</th><th class="n">2,4 GHz excellent</th><th class="n">PoE</th></tr></thead><tbody>
+${aps.map(i => { const m = radioModel(i), p = planOf(i.plan); return `<tr><td>${esc(i.name)}</td><td>${esc(m.ref)}</td><td>${esc(p.name)} · ${esc(envOf(p)[1])}</td><td class="n">${PWRS.find(x => x[0] === (i.pwr || 0))[1]}</td><td class="n">${r(wifiR(i, 5, -67))}</td><td class="n">${r(wifiR(i, 5, -75))}</td><td class="n">${m.bands.includes(2.4) ? r(wifiR(i, 2.4, -67)) : "–"}</td><td class="n">${poeOf(i)} W</td></tr>`; }).join("")}</tbody></table>` : ""}
+${ds.length ? `<h3>DECT</h3><table><thead><tr><th>Repère</th><th>Modèle</th><th>Plan</th><th class="n">Portée sûre</th><th class="n">Portée maximale</th></tr></thead><tbody>
+${ds.map(i => { const m = radioModel(i); return `<tr><td>${esc(i.name)}</td><td>${esc(m.ref)} — ${esc(m.desc)}</td><td>${esc(planOf(i.plan).name)}</td><td class="n">${r(m.rng[0])}</td><td class="n">${r(m.rng[1])}</td></tr>`; }).join("")}</tbody></table>
+<p class="sub">Combinés : ${dc.hs} (dont 1 fourni par base) pour une capacité de ${dc.cap}.${dc.over ? " <b>Capacité dépassée.</b>" : ""}</p>` : ""}
+</section>`;
+}
 // Caméras regroupées par modèle et objectif (liste du matériel).
 function camLines(){
   const g = {};
@@ -1041,7 +1125,7 @@ async function reportHtml(){
   const alerts = [...B.w, ...B.ok.filter(x => x.l.raw > 90).map(x => `${esc(x.d.name)} : ${f1(x.l.raw)} m, au-delà des 90 m d'un lien Ethernet.`)];
   if (B.ports > P.ports) alerts.push(`${B.ports} ports nécessaires pour un switch de ${P.ports} ports.`);
   const mat = [
-    ["Borne WiFi", B.cnt("ap"), ""], ...camLines(), ["Prise RJ45", B.cnt("rj"), ""],
+    ...apLines(), ...camLines(), ["Prise RJ45", B.cnt("rj"), ""],
     ["Baie de brassage", b ? 1 : 0, b ? "sur « " + esc(planOf(b.plan).name) + " »" : "à placer"],
     ["Switch", 1, `${P.ports} ports, ${B.ports} utilisés (dont 2 de réserve)`],
     ["Câble Cat6", B.total + " m", `${B.tourets} touret${B.tourets > 1 ? "s" : ""} de ${TOURET} m`],
@@ -1062,7 +1146,7 @@ ${Q.lines.map(l => `<tr><td>${esc(l.lib)}</td><td class="n">${l.q}</td><td>${l.u
     plans.push(`<section class="plan"><h2>${esc(pl.name)}</h2>
       <p class="sub">Niveau ${f1(pl.z || 0)} m · ${pl.ppm ? "échelle " + f1(pl.ppm) + " px/m" : "échelle non définie, longueurs indicatives"} · ${its.length} élément${its.length > 1 ? "s" : ""}</p>
       <img src="${c.toDataURL("image/jpeg", .88)}" alt="">
-      <p class="legend"><b style="color:#ea580c">━</b> fibre opérateur <b style="color:#1d4ed8">━</b> câble Cat6 <b style="color:#9ca3af">━</b> chemin de câbles <b style="color:#6d28d9">╌</b> 230 V dédié baie <b style="color:#be185d">╌</b> câble d'alarme <b style="color:#15803d">◔</b> identifier <b style="color:#ca8a04">◔</b> reconnaître <b style="color:#ea580c">◔</b> observer <b style="color:#dc2626">╌</b> détecter <b style="color:#4338ca">┈</b> infrarouge (nuit) <b style="color:#c81e1e">◔</b> champ des caméras</p></section>`);
+      <p class="legend"><b style="color:#ea580c">━</b> fibre opérateur <b style="color:#1d4ed8">━</b> câble Cat6 <b style="color:#9ca3af">━</b> chemin de câbles <b style="color:#6d28d9">╌</b> 230 V dédié baie <b style="color:#be185d">╌</b> câble d'alarme <b style="color:#15803d">◔</b> identifier <b style="color:#ca8a04">◔</b> reconnaître <b style="color:#ea580c">◔</b> observer <b style="color:#dc2626">╌</b> détecter <b style="color:#4338ca">┈</b> infrarouge (nuit) <b style="color:#15803d">◯</b> WiFi 5 GHz excellent / correct <b style="color:#0e7490">◯</b> DECT sûre / maximale <b style="color:#c81e1e">◔</b> champ des caméras</p></section>`);
   }
   return `<!DOCTYPE html><html lang="fr"><head><meta charset="utf-8"><title>${esc(P.name)} — rapport</title>
 <link rel="stylesheet" href="fonts/fonts.css"><style>
@@ -1096,7 +1180,7 @@ ${mat.map(r => `<tr><td>${r[0]}</td><td class="n">${r[1]}</td><td>${r[2]}</td></
 ${B.L.map(x => `<tr><td><span class="dot" style="background:${COL[x.d.type]}"></span>${esc(x.d.name)}</td><td>${NAMES[x.d.type]}${linkOf(x.d) === "alarm" ? " (alarme)" : ""}</td><td>${esc(planOf(x.d.plan).name)}</td><td class="n">${qtyOf(x.d)}</td><td class="n">${x.l.raw == null ? esc(x.l.why) : m(x.l.raw)}</td><td class="n">${x.l.order == null ? "" : x.l.order + " m"}</td></tr>`).join("") || `<tr><td colspan="6">Aucun appareil placé.</td></tr>`}
 </tbody></table></div></div>
 <p class="note">Longueurs : tracé en équerre le long des chemins de câbles, + 1,5 m (2,5 m pour une prise) de raccordement, + passage par la gaine montante et la hauteur d'étage. « À prévoir » ajoute 10 % et 3 m de marge.</p>
-${camSheet()}${quoteSection}${plans.join("")}
+${camSheet()}${radioSheet()}${quoteSection}${plans.join("")}
 </body></html>`;
 }
 async function exportReport(){
