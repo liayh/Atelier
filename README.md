@@ -132,3 +132,44 @@ Un fichier `.atelier` peut venir de n'importe où ; il est traité comme non fia
 - **Exports CSV** : formules neutralisées (cellules commençant par = + - @).
 - **pdf.js 6.5.438** (modules ES) : n'utilise plus eval (faille CVE-2024-4367 de la 3.x éliminée). Même version
   côté navigateur (`PDFJS` dans le HTML, jsDelivr) et bureau (copie locale `vendor/pdfjs/`, vérifiée par `sync-web.js`).
+
+## Signature du programme (Windows)
+
+Un programme signé n'est plus bloqué par SmartScreen et inspire confiance à l'antivirus.
+Il faut un **certificat de signature de code** (Authenticode) au nom de l'éditeur :
+- entreprise de l'UE : **Azure Artifact Signing** (abonnement mensuel, le moins cher) ;
+- particulier ou entreprise : certificat **OV** d'une autorité (ex. Certum, version carte ou cloud SimplySign).
+
+La compilation signe tout seule (application, installateur, désinstallateur) dès que les
+variables ci-dessous sont définies ; sinon elle produit des fichiers non signés.
+Si la signature est demandée et échoue, la compilation s'arrête.
+
+### BLL : Azure Artifact Signing (méthode retenue)
+Préparation unique dans le portail Azure (compte M365 de BLL) :
+1. Abonnement → Fournisseurs de ressources → inscrire `Microsoft.CodeSigning`.
+2. Créer un compte « Artifact Signing » (région West Europe, offre Basic).
+3. IAM du compte → rôle **Artifact Signing Identity Verifier** pour soi.
+4. Identity validations → New → **Public** : identité légale de BLL (SIREN…), attendre la validation.
+5. Certificate profiles → Create → **Public Trust** (ex. `atelier`).
+6. Microsoft Entra ID → Inscriptions d'applications → `atelier-signature` → secret client.
+7. IAM du compte → rôle **Artifact Signing Certificate Profile Signer** pour `atelier-signature`.
+
+Puis, sur le poste de compilation :
+```bash
+npm run sign:setup        # saisie des identifiants (fichier privé ~/.config/atelier-signature, droits 600)
+npm run sign:check        # test complet : connexion, droits, signature d'un .exe de test
+npm run dist:win:signed   # installateur + zip portable signés au nom de BLL
+```
+
+### Autres certificats
+```bash
+# Certificat en fichier .pfx (à garder HORS du dossier du projet)
+ATELIER_SIGN=pfx ATELIER_PFX=~/certs/atelier.pfx ATELIER_PFX_PASSWORD='…' npm run dist:win
+
+# Carte / jeton matériel ou autre cas : options jsign directes
+ATELIER_SIGN=jsign ATELIER_JSIGN_ARGS='--storetype PKCS11 --keystore <config> --storepass <PIN> --alias <alias>' npm run dist:win
+```
+
+À la fin, chaque `.exe` est contrôlé : signataire et horodatage (la chaîne de confiance Microsoft se vérifie sous Windows).
+Outils : `scripts/sign.js` (jsign) et `build/signing.Dockerfile` (image de compilation).
+`TARGETS=zip npm run dist:win` ne produit que le zip portable.

@@ -1,3 +1,9 @@
 node_modules/
 dist/
 web/
+
+# Certificats de signature : ne jamais les versionner
+*.pfx
+*.p12
+*.pem
+*.key

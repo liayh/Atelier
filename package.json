@@ -13,13 +13,16 @@
     "start": "npm run sync && electron .",
     "dist:win": "npm run sync && bash scripts/build-win.sh",
     "dist:linux": "npm run sync && electron-builder --linux AppImage deb --x64",
-    "csp": "node scripts/csp.js"
+    "csp": "node scripts/csp.js",
+    "sign:setup": "bash scripts/sign-setup.sh",
+    "sign:check": "bash scripts/sign-check.sh",
+    "dist:win:signed": "npm run sync && ATELIER_SIGN=azure bash scripts/build-win.sh"
   },
   "build": {
     "appId": "fr.devben.atelierimplantation",
     "productName": "Atelier d'implantation",
     "executableName": "AtelierImplantation",
-    "artifactName": "Atelier-implantation-Setup-${version}.${ext}",
+    "artifactName": "Atelier-implantation-${version}-portable.${ext}",
     "files": [
       "src/**/*",
       "web/**/*",
@@ -36,9 +39,21 @@
           "arch": [
             "x64"
           ]
+        },
+        {
+          "target": "zip",
+          "arch": [
+            "x64"
+          ]
         }
       ],
-      "icon": "build/icon.ico"
+      "icon": "build/icon.ico",
+      "signtoolOptions": {
+        "sign": "scripts/sign.js",
+        "signingHashAlgorithms": [
+          "sha256"
+        ]
+      }
     },
     "nsis": {
       "oneClick": false,
@@ -47,7 +62,8 @@
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
       "shortcutName": "Atelier d'implantation",
-      "language": "1036"
+      "language": "1036",
+      "artifactName": "Atelier-implantation-Setup-${version}.${ext}"
     },
     "fileAssociations": [
       {
@@ -86,7 +102,11 @@
       "enableEmbeddedAsarIntegrityValidation": true,
       "onlyLoadAppFromAsar": true,
       "grantFileProtocolExtraPrivileges": false
-    }
+    },
+    "electronLanguages": [
+      "fr",
+      "en-US"
+    ]
   },
   "devDependencies": {
     "@fontsource/ibm-plex-mono": "^5.3.0",
