@@ -1,7 +1,7 @@
 {
   "name": "atelier-implantation",
   "productName": "Atelier d'implantation",
-  "version": "1.5.2",
+  "version": "1.5.3",
   "description": "Implantation réseau sur plans : bornes WiFi, caméras, prises RJ45, baie, fibre et longueurs de câble.",
   "author": "devben",
   "license": "UNLICENSED",

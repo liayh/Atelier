@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'sha256-ocJHeqBj0E+EMsJc71/VyLEkg0eHbhmGMMll4c6HXMs=' https://cdn.jsdelivr.net 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob:; worker-src blob: https://cdn.jsdelivr.net; connect-src https://cdn.jsdelivr.net data: blob:; object-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'sha256-dInMQ4yJy3LrGjaVscy/1Ya1+Zge7jRaobGQt6pFc2M=' https://cdn.jsdelivr.net 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com https://cdn.jsdelivr.net; img-src 'self' data: blob:; worker-src blob: https://cdn.jsdelivr.net; connect-src https://cdn.jsdelivr.net data: blob:; object-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Atelier d'implantation</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -1088,17 +1088,19 @@ function loadPdfJs(){
   if (pdfReady) return pdfReady;
   pdfReady = import(new URL(PDFJS + "build/pdf.min.mjs", location.href).href).then(lib => {   // adresse complète (un chemin relatif serait lu comme un nom de paquet)
     const w = new URL(PDFJS + "build/pdf.worker.min.mjs", location.href);
-    if (w.origin === location.origin) lib.GlobalWorkerOptions.workerSrc = w.href;
-    // worker sur un autre domaine (CDN) : petit module local qui l'importe
-    else lib.GlobalWorkerOptions.workerPort = new Worker(URL.createObjectURL(new Blob([`import ${JSON.stringify(w.href)};`], {type:"text/javascript"})), {type:"module"});
-    return lib;
+    if (w.origin === location.origin){ lib.GlobalWorkerOptions.workerSrc = w.href; return lib; }   // version de bureau : worker local
+    // Version navigateur (fichier ouvert depuis le disque) : Chrome et Edge refusent un worker venant du CDN.
+    // On charge le module de lecture dans la page : pdf.js le détecte (globalThis.pdfjsWorker) et lit le PDF sans worker.
+    lib.GlobalWorkerOptions.workerSrc = w.href;
+    return import(w.href).then(() => lib);
   }).catch(e => { pdfReady = null; throw new Error("pdf.js indisponible"); });
   return pdfReady;
 }
 async function addPdfFile(f, note){
   const lib = await loadPdfJs(), buf = await readFile(f, "buf"), base = new URL(PDFJS, location.href).href;
   const task = lib.getDocument({data:new Uint8Array(buf), wasmUrl:base + "wasm/", standardFontDataUrl:base + "standard_fonts/", cMapUrl:base + "cmaps/", cMapPacked:true});
-  const doc = await task.promise, out = [];
+  // délai maximal : un blocage (réseau, navigateur) affiche une erreur au lieu de rester muet
+  const doc = await Promise.race([task.promise, new Promise((_, rej) => setTimeout(() => rej(new Error("lecture du PDF trop longue (connexion Internet ?)")), 60000))]), out = [];
   try {
     if (doc.numPages > 12) out.skipped = `${f.name} : ${doc.numPages} pages, seules les 12 premières ont été importées.`;
     for (let n = 1; n <= Math.min(doc.numPages, 12); n++){

@@ -16,7 +16,7 @@ function browserCsp(hash) {
     "default-src 'self'",
     `script-src 'sha256-${hash}' ${CDN} 'wasm-unsafe-eval'`,
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-    "font-src 'self' data: https://fonts.gstatic.com",
+    `font-src 'self' data: https://fonts.gstatic.com ${CDN}`,   // + polices standard des PDF (pdf.js)
     "img-src 'self' data: blob:",
     `worker-src blob: ${CDN}`,
     `connect-src ${CDN} data: blob:`,
