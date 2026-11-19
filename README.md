@@ -102,3 +102,12 @@ espace ouvert, officine / bureaux, nombreuses cloisons, béton. Case « Couvertu
 - **DECT** (Yealink W70B / W80B / W90B) : portée sûre (cloisons) et maximale (dégagé) des fiches Yealink ;
   contrôle du nombre de combinés et alerte si plusieurs bases mono-cellule (pas de passage entre bases).
 - Rapport PDF : page « Bornes WiFi et DECT ». Estimations sans les murs : à confirmer par une mesure sur site.
+
+## Switchs (TP-Link Omada)
+
+Un seul élément **Switch** (onglet Réseau), à poser dans la baie, avec choix du modèle (catalogue `SWS`) :
+SG2210MP (8 PoE+, 150 W), SG2218P (16 PoE+, 150 W), SG2428P (24 PoE+, 250 W, par défaut),
+SG3428MP (24 PoE+, 384 W), SG3452P (48 PoE+, 384 W), SG3452 (48 ports sans PoE), ou générique (ports et budget saisis).
+Dès qu'un switch est posé, les **ports disponibles** et le **budget PoE** du bilan sont la somme des switchs posés
+(champs verrouillés) ; sans switch posé, la saisie manuelle du bilan s'applique. Alertes si ports ou PoE insuffisants.
+Un prix par modèle dans le chiffrage. Anciens projets : « Switch 52 ports » → SG3452, « Switch PoE » 16 ports → SG2218P.
