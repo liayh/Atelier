@@ -50,15 +50,19 @@ role "$ME" User "Artifact Signing Identity Verifier" "Trusted Signing Identity V
 
 echo "5/6 Compte robot « atelier-signature » pour la compilation…"
 APP=""; SECRET=""
-if APP=$(az ad app list --display-name atelier-signature --query "[0].appId" -o tsv 2>/dev/null) \
-   && { [ -n "$APP" ] || APP=$(az ad app create --display-name atelier-signature --query appId -o tsv 2>/dev/null); } \
-   && [ -n "$APP" ]; then
-  az ad sp show --id "$APP" -o none 2>/dev/null || az ad sp create --id "$APP" -o none
-  SP=$(az ad sp show --id "$APP" --query id -o tsv)
-  SECRET=$(az ad app credential reset --id "$APP" --display-name compilation --years 2 --append --query password -o tsv)
+# Chaque étape peut être refusée (droits de l'annuaire) : la moindre erreur fait basculer en mode jeton.
+robot() {
+  APP=$(az ad app list --display-name atelier-signature --query "[0].appId" -o tsv) || return 1
+  [ -n "$APP" ] || APP=$(az ad app create --display-name atelier-signature --query appId -o tsv) || return 1
+  [ -n "$APP" ] || return 1
+  az ad sp show --id "$APP" -o none 2>/dev/null || az ad sp create --id "$APP" -o none || return 1
+  SP=$(az ad sp show --id "$APP" --query id -o tsv) || return 1
+  SECRET=$(az ad app credential reset --id "$APP" --display-name compilation --years 2 --append --query password -o tsv) || return 1
   echo "6/6 Droit de signer pour le compte robot…"
   sleep 20   # le temps que le compte robot soit visible partout
-  role "$SP" ServicePrincipal "Artifact Signing Certificate Profile Signer" "Trusted Signing Certificate Profile Signer"
+  role "$SP" ServicePrincipal "Artifact Signing Certificate Profile Signer" "Trusted Signing Certificate Profile Signer" || return 1
+}
+if robot 2>/tmp/robot-err; then
   MODE="robot"
 else
   # Pas le droit de créer une application dans l'annuaire : on signera avec le compte de l'utilisateur
@@ -66,7 +70,7 @@ else
   echo "    pas le droit de créer un compte robot dans l'annuaire : signature avec ton propre compte."
   echo "6/6 Droit de signer pour toi…"
   role "$ME" User "Artifact Signing Certificate Profile Signer" "Trusted Signing Certificate Profile Signer"
-  MODE="jeton"
+  MODE="jeton"; APP=""; SECRET=""
 fi
 
 if [ "$MODE" = robot ]; then
