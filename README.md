@@ -111,3 +111,19 @@ SG3428MP (24 PoE+, 384 W), SG3452P (48 PoE+, 384 W), SG3452 (48 ports sans PoE),
 Dès qu'un switch est posé, les **ports disponibles** et le **budget PoE** du bilan sont la somme des switchs posés
 (champs verrouillés) ; sans switch posé, la saisie manuelle du bilan s'applique. Alertes si ports ou PoE insuffisants.
 Un prix par modèle dans le chiffrage. Anciens projets : « Switch 52 ports » → SG3452, « Switch PoE » 16 ports → SG2218P.
+
+## Sécurité
+
+Un fichier `.atelier` peut venir de n'importe où ; il est traité comme non fiable.
+- **Chargement sûr** (`norm()` dans `Atelier_implantation.html`) : seuls les champs connus sont gardés, avec
+  le bon type ; nombres bornés, identifiants `[A-Za-z0-9_-]`, modèles pris dans les catalogues, image du plan
+  limitée à une vraie image encodée. S'applique aux fichiers ouverts, au double-clic et à la sauvegarde automatique.
+- **CSP** (ajoutée par `scripts/sync-web.js`) : seul le script du logiciel (empreinte SHA-256) s'exécute ;
+  ni code injecté, ni `eval`, ni connexion vers l'extérieur. Page du rapport PDF : aucun script, aucune ressource externe.
+- **Processus principal** (`src/main.js`) : demandes acceptées uniquement de la page du logiciel ; écriture
+  directe seulement dans un fichier choisi ou ouvert par l'utilisateur (liste tenue côté système).
+- **Electron** : isolation, bac à sable, pas de Node dans la page, navigation et fenêtres bloquées,
+  permissions limitées ; exécutable verrouillé (« fuses » : pas de RunAsNode, pas de NODE_OPTIONS ni
+  d'inspecteur, intégrité de l'archive vérifiée au démarrage).
+- **Exports CSV** : formules neutralisées (cellules commençant par = + - @).
+- **pdf.js 3.11.174** : faille CVE-2024-4367 neutralisée (`isEvalSupported:false` + CSP sans eval).

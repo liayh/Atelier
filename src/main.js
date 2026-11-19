@@ -17,6 +17,35 @@ let pendingFile = null;   // projet .atelier passé au lancement (double-clic da
 let reportPage = '';      // HTML du rapport en cours de conversion en PDF
 
 const PROJECT_EXT = /\.(atelier|json)$/i;
+const MAX_PROJECT = 300 * 1024 * 1024;   // taille maximale d'un projet ouvert (plans compris)
+
+/* ------------------------------ sécurité ------------------------------
+   1. Les demandes (IPC) ne sont acceptées que de la page du logiciel, dans la fenêtre principale.
+   2. Écriture directe (sans fenêtre « Enregistrer ») uniquement dans un fichier que l'utilisateur a choisi
+      ou ouvert lui-même : liste tenue par ce processus, jamais par la page (un projet piégé ne peut donc
+      pas écraser d'autres fichiers). */
+function checkSender(event) {
+  const url = event.senderFrame && event.senderFrame.url;
+  if (!mainWindow || event.sender !== mainWindow.webContents || !url || !url.startsWith(`${SCHEME}://${HOST}/`)) {
+    throw new Error('Demande refusée');
+  }
+}
+const knownFilesPath = () => path.join(app.getPath('userData'), 'known-files.json');
+let knownFiles = null;
+function known() {
+  if (!knownFiles) {
+    try { knownFiles = new Set(JSON.parse(fs.readFileSync(knownFilesPath(), 'utf8')).filter((p) => typeof p === 'string')); }
+    catch { knownFiles = new Set(); }
+  }
+  return knownFiles;
+}
+function rememberFile(file) {
+  const k = known(), p = path.resolve(file);
+  k.delete(p); k.add(p);
+  while (k.size > 500) k.delete(k.values().next().value);
+  try { fs.writeFileSync(knownFilesPath(), JSON.stringify([...k])); } catch { /* non bloquant */ }
+}
+const handle = (channel, fn) => ipcMain.handle(channel, (event, ...args) => { checkSender(event); return fn(...args); });
 const projectArg = (argv) => argv.slice(1).find((a) => PROJECT_EXT.test(a) && fs.existsSync(a)) || null;
 
 protocol.registerSchemesAsPrivileged([
@@ -46,7 +75,9 @@ function onReady() {
   protocol.handle(SCHEME, (request) => {
     const { pathname } = new URL(request.url);
     if (pathname === '/__report.html') {
-      return new Response(reportPage, { headers: { 'content-type': 'text/html; charset=utf-8' } });
+      // Page du rapport : aucun script, aucune ressource externe (images intégrées, polices locales).
+      return new Response(reportPage, { headers: { 'content-type': 'text/html; charset=utf-8',
+        'content-security-policy': "default-src 'none'; img-src data:; style-src 'self' 'unsafe-inline'; font-src 'self'" } });
     }
     const filePath = path.normalize(path.join(WEB_ROOT, decodeURIComponent(pathname)));
     if (!filePath.startsWith(WEB_ROOT + path.sep) || !fs.existsSync(filePath)) {
@@ -55,7 +86,7 @@ function onReady() {
     return net.fetch(pathToFileURL(filePath).toString());
   });
 
-  ipcMain.handle('save-file', async (_e, filename, data) => {
+  handle('save-file', async (filename, data) => {
     const name = path.basename(String(filename || 'export'));
     const ext = path.extname(name).slice(1).toLowerCase();
     const label = { json: 'Projet Atelier', csv: 'Tableau CSV', png: 'Image PNG' }[ext] || 'Fichier';
@@ -71,9 +102,10 @@ function onReady() {
     return filePath;
   });
 
-  ipcMain.handle('save-project', async (_e, currentPath, suggested, text) => {
-    let target = typeof currentPath === 'string' && /\.atelier$/i.test(currentPath)
-      && fs.existsSync(path.dirname(currentPath)) ? currentPath : null;
+  handle('save-project', async (currentPath, suggested, text) => {
+    // Le chemin proposé par la page n'est utilisé que s'il a été choisi ou ouvert par l'utilisateur.
+    let target = typeof currentPath === 'string' && /\.atelier$/i.test(currentPath) && known().has(path.resolve(currentPath))
+      && fs.existsSync(path.dirname(currentPath)) ? path.resolve(currentPath) : null;
     if (!target) {
       fs.mkdirSync(docsDir(), { recursive: true });
       const r = await dialog.showSaveDialog(mainWindow, {
@@ -89,10 +121,11 @@ function onReady() {
     await fs.promises.writeFile(tmp, String(text), 'utf8');
     await fs.promises.rename(tmp, target);
     app.addRecentDocument(target);
+    rememberFile(target);
     return target;
   });
 
-  ipcMain.handle('open-project', async () => {
+  handle('open-project', async () => {
     fs.mkdirSync(docsDir(), { recursive: true });
     const r = await dialog.showOpenDialog(mainWindow, {
       title: 'Ouvrir un projet', defaultPath: docsDir(), properties: ['openFile'],
@@ -102,7 +135,7 @@ function onReady() {
     return readProject(r.filePaths[0]);
   });
 
-  ipcMain.handle('save-pdf', async (_e, filename, html) => {
+  handle('save-pdf', async (filename, html) => {
     fs.mkdirSync(docsDir(), { recursive: true });
     const r = await dialog.showSaveDialog(mainWindow, {
       title: 'Enregistrer le rapport',
@@ -195,8 +228,11 @@ function secureWebContents(contents) {
 /* ------------------------------ projets ------------------------------ */
 
 async function readProject(file) {
+  const st = await fs.promises.stat(file);
+  if (!st.isFile() || st.size > MAX_PROJECT) throw new Error('Fichier de projet invalide ou trop volumineux');
   const text = await fs.promises.readFile(file, 'utf8');
   app.addRecentDocument(file);
+  if (/\.atelier$/i.test(file)) rememberFile(file);
   return { path: /\.atelier$/i.test(file) ? file : '', text };   // un .json s'enregistre ensuite en .atelier
 }
 

@@ -54,6 +54,16 @@ patch(/let dl = null;/, 'let dl = null, dlPath = "";', 'exports (variable)');
 patch(/msg\("Fichier proposé : " \+ name\);/, 'msg("Fichier enregistré : " + dlPath);', 'exports (message)');
 patch(/Configuration copiée\. Colle-la dans le chat\./, 'Configuration copiée dans le presse-papiers.', 'message copie');
 patch(/Le projet se garde seul dans ce navigateur\./, 'Le projet se garde seul sur cet ordinateur.', 'message sauvegarde');
+/* Politique de sécurité (CSP) : seul le script du logiciel, identifié par son empreinte SHA-256,
+   peut s'exécuter (tout code injecté, gestionnaire d'événement ou eval est bloqué) ; aucune connexion
+   vers l'extérieur. Calculée en dernier, sur le script final. */
+const scripts = [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)];
+if (scripts.length !== 1) { console.error(`CSP : 1 script intégré attendu, ${scripts.length} trouvé(s)`); process.exit(1); }
+const hash = require('crypto').createHash('sha256').update(scripts[0][1], 'utf8').digest('base64');
+const csp = ["default-src 'self'", `script-src 'self' 'sha256-${hash}'`, "style-src 'self' 'unsafe-inline'",
+  "img-src 'self' data: blob:", "font-src 'self' data:", "worker-src 'self' blob:", "connect-src 'self' data: blob:",
+  "object-src 'none'", "base-uri 'none'", "form-action 'none'", "frame-src 'none'"].join('; ');
+patch(/<meta charset="utf-8">/, `<meta charset="utf-8">\n<meta http-equiv="Content-Security-Policy" content="${csp}">`, 'CSP');
 fs.writeFileSync(path.join(out, 'index.html'), html);
 
 console.log(`web/ prêt depuis ${src}`);

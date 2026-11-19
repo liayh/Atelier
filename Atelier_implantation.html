@@ -413,10 +413,54 @@ function defaultPrices(){ let d = {}; try { d = JSON.parse(localStorage.getItem(
 function fresh(){ return {name:"Mon projet", ports:48, poe:370, tva:20, prices:defaultPrices(), plans:[], items:[]}; }
 // Complète un projet ancien ou importé avec les champs ajoutés depuis.
 function normPrices(p){ const r = {...defaultPrices(), ...(p || {})}; if (r.nvr && !r.nvr32) r.nvr32 = r.nvr; delete r.nvr; return r; }   // 1.3.0 : un seul prix « NVR » (32 voies)
-function normItems(items){
-  return (items || []).map(i => i.type === "sw52" ? {...i, type:"sw", rm:"SG3452"} : i.type === "swp" ? {...i, type:"sw", rm:"SG2218P"} : i);
+/* ---------- chargement sûr d'un projet ----------
+   Un fichier .atelier peut venir de n'importe où : on ne garde que les champs connus, avec le bon type.
+   Nombres bornés, identifiants réduits à [A-Za-z0-9_-], modèles pris dans les catalogues, image limitée à
+   une vraie image encodée (data:image/…;base64). Rien d'autre n'atteint la page. */
+const num = (v, lo, hi, def) => { const n = typeof v === "number" ? v : typeof v === "string" && v.trim() !== "" ? Number(v) : NaN; return Number.isFinite(n) ? Math.min(hi, Math.max(lo, n)) : def; };
+const str = (v, max) => typeof v === "string" ? v.slice(0, max) : typeof v === "number" && Number.isFinite(v) ? String(v) : "";
+const safeId = v => str(v, 40).replace(/[^A-Za-z0-9_-]/g, "");
+const IMG_RE = /^data:image\/(png|jpeg|jpg|webp|gif);base64,[A-Za-z0-9+/]+=*$/;
+const BLANK_IMG = "data:image/gif;base64,R0lGODlhAQABAIAAAP///wAAACH5BAEAAAAALAAAAAABAAEAAAICRAEAOw==";
+function normPlans(plans, ids){
+  return (Array.isArray(plans) ? plans : []).filter(p => p && typeof p === "object").slice(0, 60).map(p => {
+    let id = safeId(p.id); if (!id || ids.has(id)) id = uid(); ids.add(id);
+    const out = {id, name:str(p.name, 80) || "Plan", img:typeof p.img === "string" && IMG_RE.test(p.img) ? p.img : BLANK_IMG,
+      w:num(p.w, 1, 20000, 1000), h:num(p.h, 1, 20000, 800), ppm:num(p.ppm, 0.01, 100000, null), z:num(p.z, -50, 500, 0), op:num(p.op, 0.05, 1, .6)};
+    if (p.cables === false) out.cables = false;
+    if (p.radio === false) out.radio = false;
+    if (ENVS.some(e => e[0] === p.env)) out.env = p.env;
+    return {orig:p.id, plan:out};
+  });
 }
-function norm(o){ return {name:o.name || "Projet", ports:o.ports || 48, poe:o.poe == null ? 370 : o.poe, tva:o.tva == null ? 20 : o.tva, prices:normPrices(o.prices), plans:o.plans || [], items:normItems(o.items)}; }
+function normItems(items, planMap){
+  const ids = new Set();
+  return (Array.isArray(items) ? items : []).filter(i => i && typeof i === "object").slice(0, 5000).map(i => {
+    let type = str(i.type, 20); if (type === "sw52") type = "sw"; else if (type === "swp") type = "sw";
+    const pl = planMap.get(i.plan); if (!CAT[type] || !pl) return null;   // type inconnu ou plan absent : écarté
+    let id = safeId(i.id); if (!id || ids.has(id)) id = uid(); ids.add(id);
+    const o = {id, type, plan:pl.id, x:num(i.x, 0, pl.w, 0), y:num(i.y, 0, pl.h, 0), name:str(i.name, 60) || CAT[type].label};
+    const opt = (k, lo, hi) => { const v = num(i[k], lo, hi, null); if (v != null) o[k] = v; };
+    opt("qty", 1, 99); opt("angle", -3600, 3600); opt("fov", 1, 360); opt("r", 0.1, 500); opt("ch", 0, 64);
+    opt("poe", 0, 200); opt("focal", 0.5, 100); opt("hgt", 0.1, 50); opt("tilt", 0, 90); opt("pwr", -20, 0);
+    opt("swPorts", 1, 96); opt("swPoe", 0, 2000);
+    if (type === "cam" && CAMS.some(m => m.id === i.cam)) o.cam = i.cam;
+    const list = type === "ap" ? APS : type === "dect" ? DECTS : type === "sw" ? SWS : null;
+    if (list && list.some(m => m.id === i.rm)) o.rm = i.rm;
+    if (str(i.type, 20) === "sw52" && !o.rm) o.rm = "SG3452";
+    if (str(i.type, 20) === "swp" && !o.rm) o.rm = "SG2218P";
+    if (Array.isArray(i.path)) { const p = i.path.filter(q => Array.isArray(q) && q.length === 2).slice(0, 200).map(q => [num(q[0], 0, pl.w, 0), num(q[1], 0, pl.h, 0)]); if (p.length) o.path = p; }
+    return o;
+  }).filter(Boolean);
+}
+function norm(o){
+  o = o && typeof o === "object" ? o : {};
+  const pp = normPlans(o.plans, new Set()), planMap = new Map(pp.map(x => [x.orig, x.plan]));
+  const prices = normPrices(o.prices && typeof o.prices === "object" ? o.prices : {});
+  Object.keys(prices).forEach(k => { prices[k] = num(prices[k], 0, 1e7, 0); });
+  return {name:str(o.name, 80) || "Projet", ports:num(o.ports, 1, 9999, 48), poe:num(o.poe, 0, 100000, 370), tva:num(o.tva, 0, 100, 20),
+    prices, plans:pp.map(x => x.plan), items:normItems(o.items, planMap)};
+}
 let P = fresh();
 /* sélection : `sel` = élément principal, `multi` = sélection multiple (2 éléments ou plus) */
 const selIds = () => multi.size ? [...multi].filter(id => item(id)) : (item(sel) ? [sel] : []);
@@ -469,7 +513,7 @@ const inField = () => /INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagNam
 let saveT = null, dbp = null;
 function idb(){ if (dbp) return dbp; dbp = new Promise((res, rej) => { try { const r = indexedDB.open("atelier-implantation", 1); r.onupgradeneeded = () => r.result.createObjectStore("p"); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); } catch (e) { rej(e); } }); return dbp; }
 function save(){ clearTimeout(saveT); saveT = setTimeout(async () => { try { const d = await idb(); d.transaction("p", "readwrite").objectStore("p").put({P, planId, filePath, dirty}, "cur"); } catch (e) {} }, 500); title(); }
-async function restore(){ try { const d = await idb(); const r = d.transaction("p").objectStore("p").get("cur"); r.onsuccess = () => { const v = r.result; if (opened) return; if (v && v.P && v.P.plans && v.P.plans.length){ P = norm(v.P); planId = v.planId && planOf(v.planId) ? v.planId : P.plans[0].id; filePath = v.filePath || ""; dirty = !!v.dirty; sync(); fit(); title(); } }; } catch (e) {} }
+async function restore(){ try { const d = await idb(); const r = d.transaction("p").objectStore("p").get("cur"); r.onsuccess = () => { const v = r.result; if (opened) return; if (v && v.P && v.P.plans && v.P.plans.length){ P = norm(v.P); if (!P.plans.length) return; planId = v.planId && planOf(v.planId) ? v.planId : P.plans[0].id; filePath = v.filePath || ""; dirty = !!v.dirty; sync(); fit(); title(); } }; } catch (e) {} }
 
 /* ---------- câblage ---------- */
 const man = pts => pts.slice(1).reduce((s, p, i) => s + Math.abs(p[0] - pts[i][0]) + Math.abs(p[1] - pts[i][1]), 0);
@@ -1099,6 +1143,8 @@ $("openproj").addEventListener("change", async e => {
 if (window.desktop && window.desktop.onOpenFile) window.desktop.onOpenFile(d => openText(d.text, d.path));
 
 /* ---------- exports ---------- */
+// Cellule CSV sûre : guillemets doublés et formules neutralisées (Excel n'exécute pas une cellule qui commence par ').
+const csvCell = c => { let t = String(c); if (typeof c !== "number" && /^[=+\-@\t\r]/.test(t)) t = "'" + t; return `"${t.replace(/"/g, '""')}"`; };
 let dl = null; (async () => { try { dl = window.claude ? await window.claude.use("downloads") : null; } catch (e) { dl = null; } })();
 async function saveFile(name, data){
   if (!dl){ try { const a = document.createElement("a"); a.href = URL.createObjectURL(data instanceof Blob ? data : new Blob([data])); a.download = name; document.body.appendChild(a); a.click(); a.remove(); msg("Fichier téléchargé : " + name); } catch (e) { msg("Téléchargement impossible : " + e.message); } return; }
@@ -1121,12 +1167,12 @@ $("x-saveas").onclick = () => saveProject(true);
 $("x-csv").onclick = () => {
   const rows = [["Repere", "Type", "Cable", "Plan", "Quantite", "Longueur reelle (m)", "A prevoir (m)", "PoE (W)", "Trace"]];
   devices().forEach(d => { const l = lens(d); rows.push([d.name, NAMES[d.type], linkOf(d) === "alarm" ? "Alarme" : "Cat6", planOf(d.plan).name, qtyOf(d), l.raw == null ? "" : f1(l.raw), l.order == null ? "" : l.order, hasPoe(d) ? poeOf(d) : "", d.path && d.path.length ? "personnalise" : "automatique"]); });
-  saveFile(slug(P.name) + "-liaisons.csv", "﻿" + rows.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(";")).join("\n"));
+  saveFile(slug(P.name) + "-liaisons.csv", "﻿" + rows.map(r => r.map(csvCell).join(";")).join("\n"));
 };
 $("x-bom").onclick = () => {
   const cat = Object.fromEntries(GROUPS), rows = [["Categorie", "Designation", "Modele", "Quantite", "Repartition par plan"]];
   bom().forEach(e => { const c = CAT[e.type]; rows.push([cat[c.g], e.label, e.model || "", e.n, Object.entries(e.plans).map(([p, n]) => `${p} : ${n}`).join(" | ")]); });
-  saveFile(slug(P.name) + "-materiel.csv", "﻿" + rows.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(";")).join("\n"));
+  saveFile(slug(P.name) + "-materiel.csv", "﻿" + rows.map(r => r.map(csvCell).join(";")).join("\n"));
 };
 // Plan annoté rendu dans un canvas (taille max. `maxDim` px sur le grand côté).
 async function planCanvas(pl, maxDim){
