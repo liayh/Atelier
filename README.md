@@ -110,15 +110,10 @@ npm run dist:win:signed   # installateur + zip portable signés au nom de BLL
 # Certificat en fichier .pfx (à garder HORS du dossier du projet)
 ATELIER_SIGN=pfx ATELIER_PFX=~/certs/atelier.pfx ATELIER_PFX_PASSWORD='…' npm run dist:win
 
-# Azure Artifact Signing (BLL) : une fois pour toutes, puis test, puis compilation signée
-npm run sign:setup        # enregistre tenant, application, compte, profil et secret (fichier privé)
-npm run sign:check        # teste la chaîne complète sur un petit .exe (1 signature)
-npm run dist:win:signed   # installateur + zip portable signés
-
 # Carte / jeton matériel ou autre cas : options jsign directes
 ATELIER_SIGN=jsign ATELIER_JSIGN_ARGS='--storetype PKCS11 --keystore <config> --storepass <PIN> --alias <alias>' npm run dist:win
 ```
 
-À la fin, chaque `.exe` est contrôlé : signataire, horodatage, reconnaissance par les autorités publiques.
+À la fin, chaque `.exe` est contrôlé : signataire et horodatage (la chaîne de confiance Microsoft se vérifie sous Windows).
 Outils : `scripts/sign.js` (jsign) et `build/signing.Dockerfile` (image de compilation).
 `TARGETS=zip npm run dist:win` ne produit que le zip portable.
